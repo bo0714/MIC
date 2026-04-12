@@ -3,10 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Audio Passthrough - Ultra Low Latency</title>
+<title>Audio Passthrough Pro</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
+/* 保持原有样式不变 */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}:root{--bg:#08080e;--s1:#0e0e18;--s2:#151522;--s3:#1c1c2e;--accent:#00ffc8;--accent-dim:#00ffc828;--accent-glow:#00ffc850;--amber:#ffb020;--amber-dim:#ffb02028;--amber-glow:#ffb02060;--danger:#ff4466;--text:#e8e8f0;--muted:#5a5a72;--ring:#252538}html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;overflow-x:hidden;-webkit-tap-highlight-color:transparent;user-select:none}body{display:flex;flex-direction:column;align-items:center;padding:16px 14px 32px;position:relative}body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 70% 40% at 50% -10%,#00ffc806,transparent 70%),radial-gradient(ellipse 50% 50% at 90% 90%,#0a0a1a,transparent 60%);pointer-events:none;z-index:0}.grain{position:fixed;inset:0;pointer-events:none;z-index:999;opacity:.025;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:200px}.app{position:relative;z-index:1;width:100%;max-width:400px;display:flex;flex-direction:column;align-items:center;gap:18px}.header{text-align:center}.header h1{font-family:'Space Mono',monospace;font-size:13px;letter-spacing:.35em;text-transform:uppercase;color:var(--muted);font-weight:400}.header .sub{font-size:10px;color:var(--muted);opacity:.45;margin-top:3px;font-family:'Space Mono',monospace;letter-spacing:.08em}.viz-wrap{width:100%;aspect-ratio:2.2/1;position:relative;border-radius:14px;background:var(--s1);border:1px solid var(--ring);overflow:hidden}.viz-wrap::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 50%,var(--bg) 100%);z-index:2;pointer-events:none}.viz-wrap canvas{width:100%;height:100%;display:block}.level-row{width:100%;display:flex;align-items:center;gap:10px}.level-row .lbl{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.15em;width:24px;flex-shrink:0}.level-track{flex:1;height:5px;background:var(--s2);border-radius:3px;overflow:hidden}.level-fill{height:100%;width:0%;border-radius:3px;background:var(--accent);box-shadow:0 0 10px var(--accent-glow);transition:width .05s linear}.level-fill.hot{background:var(--danger);box-shadow:0 0 10px #ff446644}.level-db{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);width:52px;text-align:right;flex-shrink:0}.power-btn{width:100px;height:100px;border-radius:50%;border:2px solid var(--ring);background:var(--s1);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .3s cubic-bezier(.4,0,.2,1);position:relative;outline:none;-webkit-appearance:none}.power-btn svg{width:32px;height:32px;color:var(--accent);transition:all .3s}.power-btn .ico-stop{display:none}.power-btn:hover{border-color:var(--accent);box-shadow:0 0 24px var(--accent-dim)}.power-btn:active{transform:scale(.94)}.power-btn.on{border-color:var(--accent);background:#00ffc808;box-shadow:0 0 36px var(--accent-dim),inset 0 0 24px #00ffc806;animation:pulse 2s ease-in-out infinite}.power-btn.on .ico-mic{display:none}.power-btn.on .ico-stop{display:block}@keyframes pulse{0%,100%{box-shadow:0 0 36px var(--accent-dim),inset 0 0 24px #00ffc806}50%{box-shadow:0 0 50px var(--accent-glow),inset 0 0 32px #00ffc810}}.status{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.2em;color:var(--muted);transition:color .3s}.status.on{color:var(--accent)}.panel{width:100%;background:var(--s1);border:1px solid var(--ring);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:12px}.panel-title{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.2em;text-transform:uppercase}.nr-toggle-row{display:flex;align-items:center;justify-content:space-between}.nr-controls{display:flex;flex-direction:column;gap:10px;overflow:hidden;max-height:300px;opacity:1;transition:max-height .35s ease,opacity .25s ease}.nr-controls.collapsed{max-height:0;opacity:0;pointer-events:none}.toggle{width:40px;height:22px;border-radius:11px;background:var(--s3);border:1px solid var(--ring);cursor:pointer;position:relative;transition:all .3s;-webkit-appearance:none;appearance:none;outline:none;flex-shrink:0}.toggle::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--muted);transition:all .3s cubic-bezier(.4,0,.2,1)}.toggle:checked{background:var(--accent-dim);border-color:var(--accent)}.toggle:checked::after{left:20px;background:var(--accent);box-shadow:0 0 6px var(--accent-glow)}.slider-row{display:flex;align-items:center;gap:10px}.slider-row .sl-label{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.1em;width:56px;flex-shrink:0}.slider-row .sl-val{font-family:'Space Mono',monospace;font-size:10px;color:var(--accent);width:36px;text-align:right;flex-shrink:0}input[type=range]{flex:1;-webkit-appearance:none;appearance:none;height:3px;background:var(--s3);border-radius:2px;outline:none}input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 0 10px var(--accent-glow);border:2px solid var(--bg)}input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 0 10px var(--accent-glow);border:2px solid var(--bg)}.cal-btn{background:var(--s3);border:1px solid var(--ring);color:var(--amber);font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.12em;padding:7px 14px;border-radius:8px;cursor:pointer;transition:all .25s;-webkit-appearance:none;text-transform:uppercase;white-space:nowrap}.cal-btn:hover{border-color:var(--amber);background:var(--amber-dim)}.cal-btn:disabled{opacity:.4;cursor:not-allowed}.cal-btn.recording{border-color:var(--amber);background:var(--amber-dim);animation:rec-pulse 1s ease-in-out infinite}@keyframes rec-pulse{0%,100%{box-shadow:0 0 8px var(--amber-dim)}50%{box-shadow:0 0 20px var(--amber-glow)}}.cal-status{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);text-align:center;min-height:14px;transition:color .3s}.cal-status.ok{color:var(--accent)}.cal-status.rec{color:var(--amber)}.vol-row{display:flex;align-items:center;gap:10px}.vol-icon{width:18px;height:18px;color:var(--muted);flex-shrink:0}.trow{display:flex;align-items:center;justify-content:space-between}.trow span{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.15em;text-transform:uppercase}.dev-row{display:flex;align-items:center;gap:8px}.dev-row label{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.1em;width:36px;flex-shrink:0;text-transform:uppercase}.dev-sel{flex:1;background:var(--s2);border:1px solid var(--ring);border-radius:7px;color:var(--text);font-family:'Outfit',sans-serif;font-size:11px;padding:7px 10px;outline:none;-webkit-appearance:none;appearance:none;cursor:pointer}.dev-sel:focus{border-color:var(--accent)}.info-bar{width:100%;display:flex;justify-content:center;gap:20px}.info-item{font-family:'Space Mono',monospace;font-size:8px;color:var(--muted);opacity:.5;letter-spacing:.1em}.info-item span{color:var(--accent);opacity:.8}.err-overlay{display:none;position:fixed;inset:0;background:#08080eee;z-index:1000;align-items:center;justify-content:center;padding:24px}.err-overlay.show{display:flex}.err-box{background:var(--s1);border:1px solid var(--danger);border-radius:14px;padding:28px;text-align:center;max-width:320px}.err-box h2{color:var(--danger);font-size:15px;margin-bottom:10px}.err-box p{color:var(--muted);font-size:12px;line-height:1.6;margin-bottom:18px}.err-box button{background:var(--danger);color:#fff;border:none;border-radius:8px;padding:9px 24px;font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.1em;cursor:pointer}
 </style>
 </head>
@@ -15,7 +16,7 @@
 <div class="app">
   <div class="header">
     <h1>Audio Passthrough</h1>
-    <div class="sub">极速音频直通 · 延迟优先</div>
+    <div class="sub">极速音频直通 · 音质增强版</div>
   </div>
   <div class="viz-wrap"><canvas id="viz"></canvas></div>
   <div class="level-row">
@@ -28,9 +29,10 @@
     <svg class="ico-stop" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
   </button>
   <span class="status" id="statusTxt">点击开始</span>
+  
   <div class="panel">
     <div class="nr-toggle-row">
-      <span class="panel-title">降噪 Noise Reduction</span>
+      <span class="panel-title">智能降噪</span>
       <input type="checkbox" class="toggle" id="nrToggle" checked>
     </div>
     <div class="nr-controls" id="nrControls">
@@ -39,67 +41,61 @@
         <input type="range" id="nrStrength" min="0" max="100" value="40">
         <span class="sl-val" id="nrStrVal">40%</span>
       </div>
-      <div class="slider-row">
-        <span class="sl-label">噪声门限</span>
-        <input type="range" id="gateThresh" min="-80" max="-10" value="-55">
-        <span class="sl-val" id="gateVal">-55dB</span>
-      </div>
       <div style="display:flex;align-items:center;gap:10px">
-        <button class="cal-btn" id="calBtn">校准噪声</button>
-        <span class="cal-status" id="calStatus">点击校准以采集环境噪声</span>
+        <button class="cal-btn" id="calBtn">校准环境噪声</button>
+        <span class="cal-status" id="calStatus">建议在无声环境下校准</span>
       </div>
     </div>
   </div>
+
   <div class="panel">
-    <span class="panel-title">输出 Output</span>
+    <span class="panel-title">输出调节</span>
     <div class="vol-row">
       <svg class="vol-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
-      <input type="range" id="volSlider" min="0" max="200" value="100">
-      <span class="vol-val" id="volVal">100%</span>
+      <input type="range" id="volSlider" min="0" max="250" value="120">
+      <span class="vol-val" id="volVal">120%</span>
     </div>
     <div class="trow">
-      <span>实时监听 Monitor</span>
+      <span>实时监听 (Monitor)</span>
       <input type="checkbox" class="toggle" id="monToggle" checked>
     </div>
   </div>
+
   <div class="panel">
-    <span class="panel-title">设备 Devices</span>
-    <div class="dev-row">
-      <label>输入</label>
-      <select class="dev-sel" id="inSel"><option>默认麦克风</option></select>
-    </div>
-    <div class="dev-row">
-      <label>输出</label>
-      <select class="dev-sel" id="outSel"><option>默认扬声器</option></select>
-    </div>
+    <span class="panel-title">设备选择</span>
+    <div class="dev-row"><label>输入</label><select class="dev-sel" id="inSel"></select></div>
+    <div class="dev-row"><label>输出</label><select class="dev-sel" id="outSel"></select></div>
   </div>
+
   <div class="info-bar">
     <div class="info-item">延迟 <span id="latInfo">--</span></div>
     <div class="info-item">采样 <span id="srInfo">--</span></div>
     <div class="info-item">模式 <span id="modeInfo">--</span></div>
   </div>
 </div>
+
 <div class="err-overlay" id="errOvl">
   <div class="err-box">
-    <h2>无法访问麦克风</h2>
-    <p id="errMsg">请在浏览器设置中允许麦克风权限，然后重试。</p>
-    <button id="errClose">知道了</button>
+    <h2>设备异常</h2>
+    <p id="errMsg"></p>
+    <button id="errClose">确定</button>
   </div>
 </div>
 
 <script>
 // ═══════════════════════════════════════════════════
-//  AudioWorklet: 极速版降噪处理器
+//  AudioWorklet: 降噪处理器 (音质优化版)
 // ═══════════════════════════════════════════════════
 const WORKLET_CODE = `
 class NoiseReduceProcessor extends AudioWorkletProcessor {
   constructor() {
     super();
-    // 关键优化：FFT 窗口减小到 256，算法延迟降低 50%
-    this.N = 256; 
-    this.HOP = 128; 
+    // 窗口提升至 512，在 48kHz 下约为 10.6ms 延迟，能显著提升音质
+    this.N = 512; 
+    this.HOP = 256; 
     this.HALF = this.N >> 1;
 
+    // 预计算表...
     this.cosTable = new Float32Array(this.HALF);
     this.sinTable = new Float32Array(this.HALF);
     for (let i = 0; i < this.HALF; i++) {
@@ -129,7 +125,6 @@ class NoiseReduceProcessor extends AudioWorkletProcessor {
 
     this.enabled = true;
     this.nrStrength = 0.4;
-    this.gateCoeff = 0.003;
     this.noiseSpec = new Float32Array(this.HALF).fill(0.001);
     this.prevGain = new Float32Array(this.HALF).fill(1.0);
 
@@ -140,9 +135,8 @@ class NoiseReduceProcessor extends AudioWorkletProcessor {
     this.port.onmessage = (e) => {
       const d = e.data;
       if (d.type === 'nrStrength') this.nrStrength = d.value;
-      if (d.type === 'gateDb')     this.gateCoeff = Math.pow(10, d.value / 20);
       if (d.type === 'setEnabled') this.enabled = d.value;
-      if (d.type === 'calibrate')  { this.calibrating = true; this.calFrames = 0; this.calAccum.fill(0); }
+      if (d.type === 'calibrate') { this.calibrating = true; this.calFrames = 0; this.calAccum.fill(0); }
     };
   }
 
@@ -188,24 +182,23 @@ class NoiseReduceProcessor extends AudioWorkletProcessor {
 
     if (this.calibrating) {
       for (let i = 0; i < H; i++) this.calAccum[i] += Math.sqrt(re[i]*re[i] + im[i]*im[i]);
-      if (++this.calFrames >= 120) {
-        for (let i = 0; i < H; i++) this.noiseSpec[i] = this.calAccum[i] / 120;
+      if (++this.calFrames >= 80) {
+        for (let i = 0; i < H; i++) this.noiseSpec[i] = this.calAccum[i] / 80;
         this.calibrating = false;
         this.port.postMessage({ type: 'calDone' });
       }
     } else if (this.enabled) {
-      const overSub = 1.0 + this.nrStrength * 2.0;
+      const alpha = 0.7; // 平滑系数
       for (let i = 1; i < H; i++) {
         const mag = Math.sqrt(re[i]*re[i] + im[i]*im[i]);
-        const nPow = noise[i] * overSub;
-        let g = Math.max(0.05, (mag - nPow) / (mag + 1e-10));
-        if (mag < this.gateCoeff) g *= 0.1;
-        g = 0.6 * prevG[i] + 0.4 * g;
+        const nPow = noise[i] * (1.0 + this.nrStrength * 2.5);
+        let g = Math.max(0.1, (mag - nPow) / (mag + 1e-12));
+        // 平滑增益变化，防止出现“金属声”
+        g = alpha * prevG[i] + (1 - alpha) * g;
         prevG[i] = g;
         re[i] *= g; im[i] *= g;
         re[N-i] *= g; im[N-i] *= g;
       }
-      re[0] *= 0.2; im[0] = 0;
     }
 
     this.fftInverse(re, im);
@@ -216,7 +209,6 @@ class NoiseReduceProcessor extends AudioWorkletProcessor {
     const inp = inputs[0][0], out = outputs[0][0];
     if (!inp || !out) return true;
 
-    // 优化：使用 .set 进行内存拷贝
     for (let i = 0; i < inp.length; i++) {
       this.inBuf[this.inWritePos++] = inp[i];
       if (this.inWritePos >= this.N) {
@@ -237,7 +229,6 @@ class NoiseReduceProcessor extends AudioWorkletProcessor {
       this.outReadPos -= this.HOP;
       this.outWritePos -= this.HOP;
     }
-
     return true;
   }
 }
@@ -245,72 +236,32 @@ registerProcessor('noise-reduce', NoiseReduceProcessor);
 `;
 
 // ═══════════════════════════════════════════════════
-//  主应用：音频逻辑优化
+//  主应用逻辑
 // ═══════════════════════════════════════════════════
 const $ = id => document.getElementById(id);
 
-const pwrBtn = $('pwrBtn'), statusTxt = $('statusTxt'), nrToggle = $('nrToggle'), nrStr = $('nrStrength'), nrStrVal = $('nrStrVal'), gateTh = $('gateThresh'), gateVal = $('gateVal'), calBtn = $('calBtn'), calStat = $('calStatus'), volSl = $('volSlider'), volVal = $('volVal'), monTog = $('monToggle'), inSel = $('inSel'), outSel = $('outSel'), lvlFill = $('lvlFill'), lvlDb = $('lvlDb'), latInfo = $('latInfo'), srInfo = $('srInfo'), modeInfo = $('modeInfo'), canvas = $('viz'), cCtx = canvas.getContext('2d'), errOvl = $('errOvl'), errMsg = $('errMsg'), errClose = $('errClose');
+const pwrBtn = $('pwrBtn'), statusTxt = $('statusTxt'), nrToggle = $('nrToggle'), nrStr = $('nrStrength'), nrStrVal = $('nrStrVal'), calBtn = $('calBtn'), calStat = $('calStatus'), volSl = $('volSlider'), volVal = $('volVal'), monTog = $('monToggle'), inSel = $('inSel'), outSel = $('outSel'), lvlFill = $('lvlFill'), lvlDb = $('lvlDb'), latInfo = $('latInfo'), srInfo = $('srInfo'), modeInfo = $('modeInfo'), canvas = $('viz'), cCtx = canvas.getContext('2d');
 
 let actx = null, srcNode = null, gainNode = null, analyser = null, nrNode = null, stream = null, isActive = false, animId = null, freqData = null;
 
-function resizeCanvas() {
-  const r = canvas.parentElement.getBoundingClientRect();
-  canvas.width = r.width * devicePixelRatio;
-  canvas.height = r.height * devicePixelRatio;
-  cCtx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
-}
-resizeCanvas();
-window.addEventListener('resize', resizeCanvas);
-
-async function enumDevices() {
-  try {
-    const devs = await navigator.mediaDevices.enumerateDevices();
-    const ins = devs.filter(d => d.kind === 'audioinput');
-    const outs = devs.filter(d => d.kind === 'audiooutput');
-    inSel.innerHTML = ins.map((d, i) => `<option value="${d.deviceId}">${d.label || '麦克风 '+(i+1)}</option>`).join('');
-    outSel.innerHTML = outs.map((d, i) => `<option value="${d.deviceId}">${d.label || '扬声器 '+(i+1)}</option>`).join('');
-  } catch(e) {}
-}
-
-function drawViz() {
-  if (!isActive || !analyser) { animId = requestAnimationFrame(drawViz); return; }
-  const w = canvas.width / devicePixelRatio, h = canvas.height / devicePixelRatio;
-  cCtx.clearRect(0, 0, w, h);
-  analyser.getByteFrequencyData(freqData);
-  const bars = 40, bw = w / bars;
-  for (let i = 0; i < bars; i++) {
-    const v = freqData[Math.floor(i * freqData.length / bars)] / 255;
-    cCtx.fillStyle = '#00ffc8';
-    cCtx.fillRect(i * bw + 1, h - (v * h * 0.8), bw - 2, v * h * 0.8);
-  }
-  const td = new Uint8Array(analyser.frequencyBinCount);
-  analyser.getByteTimeDomainData(td);
-  let sum = 0;
-  for (let i = 0; i < td.length; i++) { const v = (td[i]-128)/128; sum += v*v; }
-  const rms = Math.sqrt(sum / td.length);
-  lvlFill.style.width = Math.min(100, rms * 300) + '%';
-  lvlDb.textContent = (rms > 0.0005 ? (20*Math.log10(rms)).toFixed(1) : '-∞') + ' dB';
-  animId = requestAnimationFrame(drawViz);
-}
+// 音量补偿系数：算法会导致感知音量下降，此处固定增强
+const AUTO_MAKEUP_GAIN = 1.8; 
 
 async function startAudio() {
   try {
-    // 强制关闭所有可能导致延迟的浏览器预处理
     const constraints = {
       audio: {
         deviceId: inSel.value ? { exact: inSel.value } : undefined,
         echoCancellation: false,
         noiseSuppression: false,
-        autoGainControl: false,
-        latency: 0
+        autoGainControl: false
       }
     };
 
     stream = await navigator.mediaDevices.getUserMedia(constraints);
     
-    // 强制 48kHz 采样率，匹配手机硬件底层
     actx = new (window.AudioContext || window.webkitAudioContext)({
-      latencyHint: 0, 
+      latencyHint: 'interactive', 
       sampleRate: 48000 
     });
 
@@ -324,15 +275,16 @@ async function startAudio() {
     nrNode.port.onmessage = (e) => {
       if (e.data.type === 'calDone') {
         calBtn.disabled = false; calBtn.classList.remove('recording');
-        calStat.textContent = '✓ 已同步环境噪声'; calStat.className = 'cal-status ok';
+        calStat.textContent = '✓ 环境噪声校准完成'; calStat.className = 'cal-status ok';
       }
     };
 
     gainNode = actx.createGain();
-    const boost = 1.5; 
-    gainNode.gain.value = (volSl.value / 100) * boost;
+    // 应用音量补偿
+    gainNode.gain.value = (volSl.value / 100) * AUTO_MAKEUP_GAIN;
+    
     analyser = actx.createAnalyser();
-    analyser.fftSize = 128; // 分析器也要减小以节省性能
+    analyser.fftSize = 256;
     freqData = new Uint8Array(analyser.frequencyBinCount);
 
     srcNode.connect(nrNode);
@@ -340,96 +292,111 @@ async function startAudio() {
     gainNode.connect(analyser);
 
     if (monTog.checked) analyser.connect(actx.destination);
-
-    if (typeof actx.setSinkId === 'function' && outSel.value) {
-        await actx.setSinkId(outSel.value);
-    }
+    if (typeof actx.setSinkId === 'function' && outSel.value) await actx.setSinkId(outSel.value);
 
     nrNode.port.postMessage({ type: 'nrStrength', value: nrStr.value / 100 });
-    nrNode.port.postMessage({ type: 'gateDb', value: parseFloat(gateTh.value) });
     nrNode.port.postMessage({ type: 'setEnabled', value: nrToggle.checked });
 
     isActive = true;
     pwrBtn.classList.add('on');
-    statusTxt.textContent = '实时直通中';
+    statusTxt.textContent = '处理中...';
     srInfo.textContent = actx.sampleRate + ' Hz';
-    latInfo.textContent = Math.round((actx.baseLatency || 0) * 1000) + ' ms';
-    modeInfo.textContent = '256pt';
+    latInfo.textContent = '~' + Math.round((actx.baseLatency || 0.01) * 1000 + 10) + ' ms';
+    modeInfo.textContent = '512pt';
     drawViz();
-    enumDevices();
   } catch(err) {
-    errMsg.textContent = err.message; errOvl.classList.add('show');
+    $('errMsg').textContent = "错误: " + err.message; $('errOvl').classList.add('show');
     cleanup();
   }
 }
 
-function cleanup() {
-  isActive = false; // 先变更状态
+async function cleanup() {
+  isActive = false;
   if (animId) cancelAnimationFrame(animId);
   
-  // 1. 断开所有连接
-  [srcNode, nrNode, gainNode, analyser].forEach(n => { 
-    if (n) {
-      try { n.disconnect(); } catch(e) {}
-    }
-  });
-
-  // 2. 停止麦克风采集（关键：这才是真正关掉麦克风灯和声音的地方）
   if (stream) {
-    stream.getTracks().forEach(t => {
-      t.stop();
-      console.log("Track stopped:", t.label);
-    });
+    stream.getTracks().forEach(t => t.stop());
     stream = null;
   }
 
-  // 3. 关闭音频上下文
+  [srcNode, nrNode, gainNode, analyser].forEach(n => { 
+    if (n) try { n.disconnect(); } catch(e) {}
+  });
+
   if (actx) {
-    actx.close().then(() => {
-      actx = null;
-      console.log("AudioContext closed");
-    });
+    await actx.close();
+    actx = null;
   }
 
-  // 4. 重置 UI
   pwrBtn.classList.remove('on');
   statusTxt.textContent = '点击开始';
-  latInfo.textContent = '--'; 
-  srInfo.textContent = '--'; 
-  modeInfo.textContent = '--';
+  lvlFill.style.width = '0%';
+  lvlDb.textContent = '-∞ dB';
+  latInfo.textContent = '--'; srInfo.textContent = '--'; modeInfo.textContent = '--';
 }
 
+function drawViz() {
+  if (!isActive || !analyser) return;
+  const w = canvas.width / devicePixelRatio, h = canvas.height / devicePixelRatio;
+  cCtx.clearRect(0, 0, w, h);
+  analyser.getByteFrequencyData(freqData);
+  const bars = 30, bw = w / bars;
+  for (let i = 0; i < bars; i++) {
+    const v = freqData[Math.floor(i * freqData.length / bars)] / 255;
+    cCtx.fillStyle = '#00ffc8';
+    cCtx.fillRect(i * bw + 2, h - (v * h), bw - 4, v * h);
+  }
+  const td = new Uint8Array(analyser.frequencyBinCount);
+  analyser.getByteTimeDomainData(td);
+  let sum = 0;
+  for (let i = 0; i < td.length; i++) { const v = (td[i]-128)/128; sum += v*v; }
+  const rms = Math.sqrt(sum / td.length);
+  lvlFill.style.width = Math.min(100, rms * 400) + '%';
+  lvlDb.textContent = (rms > 0.0001 ? (20*Math.log10(rms)).toFixed(1) : '-∞') + ' dB';
+  animId = requestAnimationFrame(drawViz);
+}
+
+// 监听器
 pwrBtn.addEventListener('click', () => isActive ? cleanup() : startAudio());
-nrToggle.addEventListener('change', () => {
-  $('nrControls').classList.toggle('collapsed', !nrToggle.checked);
-  if (nrNode) nrNode.port.postMessage({ type: 'setEnabled', value: nrToggle.checked });
+volSl.addEventListener('input', () => {
+  volVal.textContent = volSl.value + '%';
+  if (gainNode) gainNode.gain.value = (volSl.value / 100) * AUTO_MAKEUP_GAIN;
 });
 nrStr.addEventListener('input', () => {
   nrStrVal.textContent = nrStr.value + '%';
   if (nrNode) nrNode.port.postMessage({ type: 'nrStrength', value: nrStr.value / 100 });
 });
-gateTh.addEventListener('input', () => {
-  gateVal.textContent = gateTh.value + 'dB';
-  if (nrNode) nrNode.port.postMessage({ type: 'gateDb', value: parseFloat(gateTh.value) });
-});
-volSl.addEventListener('input', () => {
-  volVal.textContent = volSl.value + '%';
-  if (gainNode) gainNode.gain.value = volSl.value / 100;
+calBtn.addEventListener('click', () => {
+  if (!nrNode) return;
+  calBtn.disabled = true; calBtn.classList.add('recording');
+  calStat.textContent = '采样中，请保持安静...';
+  nrNode.port.postMessage({ type: 'calibrate' });
 });
 monTog.addEventListener('change', () => {
   if (!analyser || !actx) return;
   monTog.checked ? analyser.connect(actx.destination) : analyser.disconnect(actx.destination);
 });
-calBtn.addEventListener('click', () => {
-  if (!nrNode) return;
-  calBtn.disabled = true; calBtn.classList.add('recording');
-  calStat.textContent = '请安静... 正在采样'; calStat.className = 'cal-status rec';
-  nrNode.port.postMessage({ type: 'calibrate' });
-});
-errClose.addEventListener('click', () => errOvl.classList.remove('show'));
+$('errClose').onclick = () => $('errOvl').classList.remove('show');
 
-// 自动检测权限并列出设备
-navigator.mediaDevices.getUserMedia({ audio: true }).then(s => { s.getTracks().forEach(t => t.stop()); enumDevices(); }).catch(() => enumDevices());
+function resizeCanvas() {
+  const r = canvas.parentElement.getBoundingClientRect();
+  canvas.width = r.width * devicePixelRatio;
+  canvas.height = r.height * devicePixelRatio;
+  cCtx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+async function enumDevices() {
+  try {
+    const devs = await navigator.mediaDevices.enumerateDevices();
+    const ins = devs.filter(d => d.kind === 'audioinput');
+    const outs = devs.filter(d => d.kind === 'audiooutput');
+    inSel.innerHTML = ins.map(d => `<option value="${d.deviceId}">${d.label || '输入设备'}</option>`).join('');
+    outSel.innerHTML = outs.map(d => `<option value="${d.deviceId}">${d.label || '输出设备'}</option>`).join('');
+  } catch(e) {}
+}
+navigator.mediaDevices.getUserMedia({ audio: true }).then(s => { s.getTracks().forEach(t => t.stop()); enumDevices(); });
 </script>
 </body>
 </html>
