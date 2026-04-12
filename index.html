@@ -82,234 +82,71 @@
   </div>
 </div>
 
-<script>
-// ═══════════════════════════════════════════════════
-//  AudioWorklet: 降噪处理器 (音质优化版)
-// ═══════════════════════════════════════════════════
-const WORKLET_CODE = `
-class NoiseReduceProcessor extends AudioWorkletProcessor {
-  constructor() {
-    super();
-    // 窗口提升至 512，在 48kHz 下约为 10.6ms 延迟，能显著提升音质
-    this.N = 512; 
-    this.HOP = 256; 
-    this.HALF = this.N >> 1;
-
-    // 预计算表...
-    this.cosTable = new Float32Array(this.HALF);
-    this.sinTable = new Float32Array(this.HALF);
-    for (let i = 0; i < this.HALF; i++) {
-      const angle = -2 * Math.PI * i / this.N;
-      this.cosTable[i] = Math.cos(angle);
-      this.sinTable[i] = Math.sin(angle);
-    }
-    this.revIdx = new Uint32Array(this.N);
-    const bits = Math.round(Math.log2(this.N));
-    for (let i = 0; i < this.N; i++) {
-      let v = i, r = 0;
-      for (let j = 0; j < bits; j++) { r = (r << 1) | (v & 1); v >>= 1; }
-      this.revIdx[i] = r;
-    }
-
-    this.inBuf = new Float32Array(this.N);
-    this.inWritePos = 0;
-    this.outBuf = new Float32Array(this.N * 2);
-    this.outReadPos = 0;
-    this.outWritePos = 0;
-
-    this.re = new Float32Array(this.N);
-    this.im = new Float32Array(this.N);
-    this.window = new Float32Array(this.N);
-    for (let i = 0; i < this.N; i++)
-      this.window[i] = 0.5 * (1 - Math.cos(2 * Math.PI * i / this.N));
-
-    this.enabled = true;
-    this.nrStrength = 0.4;
-    this.noiseSpec = new Float32Array(this.HALF).fill(0.001);
-    this.prevGain = new Float32Array(this.HALF).fill(1.0);
-
-    this.calibrating = false;
-    this.calFrames = 0;
-    this.calAccum = new Float32Array(this.HALF);
-
-    this.port.onmessage = (e) => {
-      const d = e.data;
-      if (d.type === 'nrStrength') this.nrStrength = d.value;
-      if (d.type === 'setEnabled') this.enabled = d.value;
-      if (d.type === 'calibrate') { this.calibrating = true; this.calFrames = 0; this.calAccum.fill(0); }
-    };
-  }
-
-  fftForward(re, im) {
-    const N = this.N, rev = this.revIdx, cos = this.cosTable, sin = this.sinTable;
-    for (let i = 0; i < N; i++) {
-      if (i < rev[i]) {
-        let t = re[i]; re[i] = re[rev[i]]; re[rev[i]] = t;
-        t = im[i]; im[i] = im[rev[i]]; im[rev[i]] = t;
-      }
-    }
-    for (let size = 2; size <= N; size <<= 1) {
-      const hs = size >> 1, step = N / size;
-      for (let i = 0; i < N; i += size) {
-        for (let j = 0; j < hs; j++) {
-          const k = j * step;
-          const tRe = cos[k], tIm = sin[k];
-          const t1 = re[i+j+hs]*tRe - im[i+j+hs]*tIm;
-          const t2 = re[i+j+hs]*tIm + im[i+j+hs]*tRe;
-          re[i+j+hs] = re[i+j] - t1;
-          im[i+j+hs] = im[i+j] - t2;
-          re[i+j] += t1;
-          im[i+j] += t2;
-        }
-      }
-    }
-  }
-
-  fftInverse(re, im) {
-    const N = this.N;
-    for (let i = 0; i < N; i++) im[i] = -im[i];
-    this.fftForward(re, im);
-    const inv = 1 / N;
-    for (let i = 0; i < N; i++) { re[i] *= inv; im[i] = -im[i] * inv; }
-  }
-
-  processFrame() {
-    const N = this.N, H = this.HALF, re = this.re, im = this.im;
-    const noise = this.noiseSpec, prevG = this.prevGain, win = this.window;
-    
-    for (let i = 0; i < N; i++) { re[i] = this.inBuf[i] * win[i]; im[i] = 0; }
-    this.fftForward(re, im);
-
-    if (this.calibrating) {
-      for (let i = 0; i < H; i++) this.calAccum[i] += Math.sqrt(re[i]*re[i] + im[i]*im[i]);
-      if (++this.calFrames >= 80) {
-        for (let i = 0; i < H; i++) this.noiseSpec[i] = this.calAccum[i] / 80;
-        this.calibrating = false;
-        this.port.postMessage({ type: 'calDone' });
-      }
-    } else if (this.enabled) {
-      const alpha = 0.7; // 平滑系数
-      for (let i = 1; i < H; i++) {
-        const mag = Math.sqrt(re[i]*re[i] + im[i]*im[i]);
-        const nPow = noise[i] * (1.0 + this.nrStrength * 2.5);
-        let g = Math.max(0.1, (mag - nPow) / (mag + 1e-12));
-        // 平滑增益变化，防止出现“金属声”
-        g = alpha * prevG[i] + (1 - alpha) * g;
-        prevG[i] = g;
-        re[i] *= g; im[i] *= g;
-        re[N-i] *= g; im[N-i] *= g;
-      }
-    }
-
-    this.fftInverse(re, im);
-    for (let i = 0; i < N; i++) this.outBuf[this.outWritePos + i] += re[i] * win[i];
-  }
-
-  process(inputs, outputs) {
-    const inp = inputs[0][0], out = outputs[0][0];
-    if (!inp || !out) return true;
-
-    for (let i = 0; i < inp.length; i++) {
-      this.inBuf[this.inWritePos++] = inp[i];
-      if (this.inWritePos >= this.N) {
-        this.processFrame();
-        this.inWritePos = this.N - this.HOP;
-        this.inBuf.set(this.inBuf.subarray(this.HOP));
-        this.outWritePos += this.HOP;
-      }
-    }
-
-    for (let i = 0; i < out.length; i++) {
-      out[i] = this.outBuf[this.outReadPos++];
-      this.outBuf[this.outReadPos - this.HOP - 1] = 0;
-    }
-
-    if (this.outReadPos > this.N) {
-      this.outBuf.set(this.outBuf.subarray(this.HOP));
-      this.outReadPos -= this.HOP;
-      this.outWritePos -= this.HOP;
-    }
-    return true;
-  }
-}
-registerProcessor('noise-reduce', NoiseReduceProcessor);
-`;
-
-// ═══════════════════════════════════════════════════
-//  主应用逻辑
-// ═══════════════════════════════════════════════════
 const $ = id => document.getElementById(id);
 
-const pwrBtn = $('pwrBtn'), statusTxt = $('statusTxt'), nrToggle = $('nrToggle'), nrStr = $('nrStrength'), nrStrVal = $('nrStrVal'), calBtn = $('calBtn'), calStat = $('calStatus'), volSl = $('volSlider'), volVal = $('volVal'), monTog = $('monToggle'), inSel = $('inSel'), outSel = $('outSel'), lvlFill = $('lvlFill'), lvlDb = $('lvlDb'), latInfo = $('latInfo'), srInfo = $('srInfo'), modeInfo = $('modeInfo'), canvas = $('viz'), cCtx = canvas.getContext('2d');
+const pwrBtn = $('pwrBtn'), statusTxt = $('statusTxt'), nrToggle = $('nrToggle'), 
+      volSl = $('volSlider'), volVal = $('volVal'), monTog = $('monToggle'), 
+      inSel = $('inSel'), outSel = $('outSel'), lvlFill = $('lvlFill'), 
+      lvlDb = $('lvlDb'), latInfo = $('latInfo'), srInfo = $('srInfo'), 
+      modeInfo = $('modeInfo'), canvas = $('viz'), cCtx = canvas.getContext('2d');
 
-let actx = null, srcNode = null, gainNode = null, analyser = null, nrNode = null, stream = null, isActive = false, animId = null, freqData = null;
+let actx = null, srcNode = null, gainNode = null, analyser = null, stream = null, isActive = false, animId = null;
 
-// 音量补偿系数：算法会导致感知音量下降，此处固定增强
-const AUTO_MAKEUP_GAIN = 1.8; 
+// 【核心改动】音量补偿系数调高到 3.0，确保声音足够大
+const MASTER_GAIN_BOOST = 3.0;
 
 async function startAudio() {
   try {
+    // 【关键优化】启用内置硬件降噪和自动增益，这比手写算法稳定得多
     const constraints = {
       audio: {
         deviceId: inSel.value ? { exact: inSel.value } : undefined,
-        echoCancellation: false,
-        noiseSuppression: false,
-        autoGainControl: false
+        echoCancellation: true,    // 开启回声消除，防止啸叫
+        noiseSuppression: true,    // 开启内置降噪，消除背景沙沙声
+        autoGainControl: true,     // 开启自动增益
+        latency: 0                 // 尝试最低延迟
       }
     };
 
     stream = await navigator.mediaDevices.getUserMedia(constraints);
     
+    // 使用默认采样率，避免重采样带来的音质损失
     actx = new (window.AudioContext || window.webkitAudioContext)({
-      latencyHint: 'interactive', 
-      sampleRate: 48000 
+      latencyHint: 'interactive'
     });
 
-    const blob = new Blob([WORKLET_CODE], { type: 'application/javascript' });
-    const wUrl = URL.createObjectURL(blob);
-    await actx.audioWorklet.addModule(wUrl);
-    URL.revokeObjectURL(wUrl);
-
     srcNode = actx.createMediaStreamSource(stream);
-    nrNode = new AudioWorkletNode(actx, 'noise-reduce');
-    nrNode.port.onmessage = (e) => {
-      if (e.data.type === 'calDone') {
-        calBtn.disabled = false; calBtn.classList.remove('recording');
-        calStat.textContent = '✓ 环境噪声校准完成'; calStat.className = 'cal-status ok';
-      }
-    };
-
     gainNode = actx.createGain();
-    // 应用音量补偿
-    gainNode.gain.value = (volSl.value / 100) * AUTO_MAKEUP_GAIN;
+    
+    // 设置音量
+    updateVolume();
     
     analyser = actx.createAnalyser();
     analyser.fftSize = 256;
-    freqData = new Uint8Array(analyser.frequencyBinCount);
 
-    srcNode.connect(nrNode);
-    nrNode.connect(gainNode);
+    // 【连线路径简化】Mic -> Gain -> Analyser -> Destination
+    srcNode.connect(gainNode);
     gainNode.connect(analyser);
 
-    if (monTog.checked) analyser.connect(actx.destination);
-    if (typeof actx.setSinkId === 'function' && outSel.value) await actx.setSinkId(outSel.value);
-
-    nrNode.port.postMessage({ type: 'nrStrength', value: nrStr.value / 100 });
-    nrNode.port.postMessage({ type: 'setEnabled', value: nrToggle.checked });
+    if (monTog.checked) {
+      analyser.connect(actx.destination);
+    }
 
     isActive = true;
     pwrBtn.classList.add('on');
-    statusTxt.textContent = '处理中...';
+    statusTxt.textContent = '稳定监听中';
     srInfo.textContent = actx.sampleRate + ' Hz';
-    latInfo.textContent = '~' + Math.round((actx.baseLatency || 0.01) * 1000 + 10) + ' ms';
-    modeInfo.textContent = '512pt';
+    latInfo.textContent = '硬件加速';
+    modeInfo.textContent = 'Native';
+    
     drawViz();
   } catch(err) {
-    $('errMsg').textContent = "错误: " + err.message; $('errOvl').classList.add('show');
+    alert("启动失败: " + err.message);
     cleanup();
   }
 }
 
+// 异步清理函数，确保彻底停止
 async function cleanup() {
   isActive = false;
   if (animId) cancelAnimationFrame(animId);
@@ -319,9 +156,9 @@ async function cleanup() {
     stream = null;
   }
 
-  [srcNode, nrNode, gainNode, analyser].forEach(n => { 
-    if (n) try { n.disconnect(); } catch(e) {}
-  });
+  if (srcNode) srcNode.disconnect();
+  if (gainNode) gainNode.disconnect();
+  if (analyser) analyser.disconnect();
 
   if (actx) {
     await actx.close();
@@ -332,20 +169,31 @@ async function cleanup() {
   statusTxt.textContent = '点击开始';
   lvlFill.style.width = '0%';
   lvlDb.textContent = '-∞ dB';
-  latInfo.textContent = '--'; srInfo.textContent = '--'; modeInfo.textContent = '--';
+}
+
+function updateVolume() {
+  if (gainNode) {
+    // 逻辑：滑块百分比 * 硬件补偿
+    const val = (volSl.value / 100) * MASTER_GAIN_BOOST;
+    gainNode.gain.setTargetAtTime(val, actx.currentTime, 0.01);
+  }
 }
 
 function drawViz() {
   if (!isActive || !analyser) return;
   const w = canvas.width / devicePixelRatio, h = canvas.height / devicePixelRatio;
   cCtx.clearRect(0, 0, w, h);
+  
+  const freqData = new Uint8Array(analyser.frequencyBinCount);
   analyser.getByteFrequencyData(freqData);
+  
   const bars = 30, bw = w / bars;
   for (let i = 0; i < bars; i++) {
     const v = freqData[Math.floor(i * freqData.length / bars)] / 255;
     cCtx.fillStyle = '#00ffc8';
     cCtx.fillRect(i * bw + 2, h - (v * h), bw - 4, v * h);
   }
+
   const td = new Uint8Array(analyser.frequencyBinCount);
   analyser.getByteTimeDomainData(td);
   let sum = 0;
@@ -353,50 +201,32 @@ function drawViz() {
   const rms = Math.sqrt(sum / td.length);
   lvlFill.style.width = Math.min(100, rms * 400) + '%';
   lvlDb.textContent = (rms > 0.0001 ? (20*Math.log10(rms)).toFixed(1) : '-∞') + ' dB';
+  
   animId = requestAnimationFrame(drawViz);
 }
 
-// 监听器
-pwrBtn.addEventListener('click', () => isActive ? cleanup() : startAudio());
-volSl.addEventListener('input', () => {
+// 按钮与监听
+pwrBtn.onclick = () => isActive ? cleanup() : startAudio();
+volSl.oninput = () => {
   volVal.textContent = volSl.value + '%';
-  if (gainNode) gainNode.gain.value = (volSl.value / 100) * AUTO_MAKEUP_GAIN;
-});
-nrStr.addEventListener('input', () => {
-  nrStrVal.textContent = nrStr.value + '%';
-  if (nrNode) nrNode.port.postMessage({ type: 'nrStrength', value: nrStr.value / 100 });
-});
-calBtn.addEventListener('click', () => {
-  if (!nrNode) return;
-  calBtn.disabled = true; calBtn.classList.add('recording');
-  calStat.textContent = '采样中，请保持安静...';
-  nrNode.port.postMessage({ type: 'calibrate' });
-});
-monTog.addEventListener('change', () => {
+  updateVolume();
+};
+monTog.onchange = () => {
   if (!analyser || !actx) return;
-  monTog.checked ? analyser.connect(actx.destination) : analyser.disconnect(actx.destination);
-});
-$('errClose').onclick = () => $('errOvl').classList.remove('show');
+  if (monTog.checked) analyser.connect(actx.destination);
+  else analyser.disconnect(actx.destination);
+};
 
-function resizeCanvas() {
-  const r = canvas.parentElement.getBoundingClientRect();
-  canvas.width = r.width * devicePixelRatio;
-  canvas.height = r.height * devicePixelRatio;
-  cCtx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
-}
-window.addEventListener('resize', resizeCanvas);
-resizeCanvas();
+// 初始设备获取
+navigator.mediaDevices.getUserMedia({ audio: true }).then(s => {
+  s.getTracks().forEach(t => t.stop());
+  enumDevices();
+});
 
 async function enumDevices() {
-  try {
-    const devs = await navigator.mediaDevices.enumerateDevices();
-    const ins = devs.filter(d => d.kind === 'audioinput');
-    const outs = devs.filter(d => d.kind === 'audiooutput');
-    inSel.innerHTML = ins.map(d => `<option value="${d.deviceId}">${d.label || '输入设备'}</option>`).join('');
-    outSel.innerHTML = outs.map(d => `<option value="${d.deviceId}">${d.label || '输出设备'}</option>`).join('');
-  } catch(e) {}
+  const devs = await navigator.mediaDevices.enumerateDevices();
+  inSel.innerHTML = devs.filter(d => d.kind === 'audioinput').map(d => `<option value="${d.deviceId}">${d.label || '输入'}</option>`).join('');
+  outSel.innerHTML = devs.filter(d => d.kind === 'audiooutput').map(d => `<option value="${d.deviceId}">${d.label || '输出'}</option>`).join('');
 }
-navigator.mediaDevices.getUserMedia({ audio: true }).then(s => { s.getTracks().forEach(t => t.stop()); enumDevices(); });
-</script>
 </body>
 </html>
