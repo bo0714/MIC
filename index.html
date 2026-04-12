@@ -2,887 +2,755 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Audio Passthrough</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@300;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#08080e;--s1:#0e0e18;--s2:#151522;--s3:#1c1c2e;
+  --accent:#00ffc8;--accent-dim:#00ffc828;--accent-glow:#00ffc850;
+  --amber:#ffb020;--amber-dim:#ffb02028;--amber-glow:#ffb02060;
+  --danger:#ff4466;--text:#e8e8f0;--muted:#5a5a72;--ring:#252538;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;overflow-x:hidden;-webkit-tap-highlight-color:transparent;user-select:none}
+body{display:flex;flex-direction:column;align-items:center;padding:16px 14px 32px;position:relative}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 70% 40% at 50% -10%,#00ffc806,transparent 70%),radial-gradient(ellipse 50% 50% at 90% 90%,#0a0a1a,transparent 60%);pointer-events:none;z-index:0}
+.grain{position:fixed;inset:0;pointer-events:none;z-index:999;opacity:.025;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:200px}
+.app{position:relative;z-index:1;width:100%;max-width:400px;display:flex;flex-direction:column;align-items:center;gap:18px}
+.header{text-align:center}
+.header h1{font-family:'Space Mono',monospace;font-size:13px;letter-spacing:.35em;text-transform:uppercase;color:var(--muted);font-weight:400}
+.header .sub{font-size:10px;color:var(--muted);opacity:.45;margin-top:3px;font-family:'Space Mono',monospace;letter-spacing:.08em}
 
-  :root {
-    --bg: #0a0a0f;
-    --surface: #12121a;
-    --surface-2: #1a1a26;
-    --accent: #00ffc8;
-    --accent-dim: #00ffc833;
-    --accent-glow: #00ffc866;
-    --danger: #ff4466;
-    --danger-glow: #ff446644;
-    --text: #e8e8f0;
-    --text-muted: #6a6a80;
-    --ring: #2a2a3a;
-  }
+/* Visualizer */
+.viz-wrap{width:100%;aspect-ratio:2.2/1;position:relative;border-radius:14px;background:var(--s1);border:1px solid var(--ring);overflow:hidden}
+.viz-wrap::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 50%,var(--bg) 100%);z-index:2;pointer-events:none}
+.viz-wrap canvas{width:100%;height:100%;display:block}
 
-  html, body {
-    height: 100%;
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Outfit', sans-serif;
-    overflow: hidden;
-    -webkit-tap-highlight-color: transparent;
-    user-select: none;
-  }
+/* Level */
+.level-row{width:100%;display:flex;align-items:center;gap:10px}
+.level-row .lbl{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.15em;width:24px;flex-shrink:0}
+.level-track{flex:1;height:5px;background:var(--s2);border-radius:3px;overflow:hidden}
+.level-fill{height:100%;width:0%;border-radius:3px;background:var(--accent);box-shadow:0 0 10px var(--accent-glow);transition:width .05s linear}
+.level-fill.hot{background:var(--danger);box-shadow:0 0 10px #ff446644}
+.level-db{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);width:52px;text-align:right;flex-shrink:0}
 
-  body {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-    position: relative;
-  }
+/* Power */
+.power-btn{width:100px;height:100px;border-radius:50%;border:2px solid var(--ring);background:var(--s1);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .3s cubic-bezier(.4,0,.2,1);position:relative;outline:none;-webkit-appearance:none}
+.power-btn::before{content:'';position:absolute;inset:-5px;border-radius:50%;border:1px solid transparent;transition:border-color .3s}
+.power-btn svg{width:32px;height:32px;color:var(--accent);transition:all .3s}
+.power-btn .ico-stop{display:none}
+.power-btn:hover{border-color:var(--accent);box-shadow:0 0 24px var(--accent-dim)}
+.power-btn:active{transform:scale(.94)}
+.power-btn.on{border-color:var(--accent);background:#00ffc808;box-shadow:0 0 36px var(--accent-dim),inset 0 0 24px #00ffc806;animation:pulse 2s ease-in-out infinite}
+.power-btn.on::before{border-color:var(--accent-dim)}
+.power-btn.on .ico-mic{display:none}
+.power-btn.on .ico-stop{display:block}
+@keyframes pulse{0%,100%{box-shadow:0 0 36px var(--accent-dim),inset 0 0 24px #00ffc806}50%{box-shadow:0 0 50px var(--accent-glow),inset 0 0 32px #00ffc810}}
 
-  /* Ambient background */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background:
-      radial-gradient(ellipse 60% 40% at 50% 0%, #00ffc808 0%, transparent 70%),
-      radial-gradient(ellipse 50% 50% at 80% 80%, #000a1440 0%, transparent 60%);
-    pointer-events: none;
-    z-index: 0;
-  }
+.status{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.2em;color:var(--muted);transition:color .3s}
+.status.on{color:var(--accent)}
 
-  .app {
-    position: relative;
-    z-index: 1;
-    width: 100%;
-    max-width: 420px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 28px;
-  }
+/* Panels */
+.panel{width:100%;background:var(--s1);border:1px solid var(--ring);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:12px}
+.panel-head{display:flex;align-items:center;justify-content:space-between}
+.panel-title{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.2em;text-transform:uppercase}
 
-  /* Header */
-  .header {
-    text-align: center;
-  }
-  .header h1 {
-    font-family: 'Space Mono', monospace;
-    font-size: 14px;
-    letter-spacing: 0.3em;
-    text-transform: uppercase;
-    color: var(--text-muted);
-    font-weight: 400;
-  }
-  .header .subtitle {
-    font-size: 11px;
-    color: var(--text-muted);
-    opacity: 0.5;
-    margin-top: 4px;
-    font-family: 'Space Mono', monospace;
-  }
+/* NR specific */
+.nr-toggle-row{display:flex;align-items:center;justify-content:space-between}
+.nr-controls{display:flex;flex-direction:column;gap:10px;overflow:hidden;max-height:200px;opacity:1;transition:max-height .35s ease,opacity .25s ease}
+.nr-controls.collapsed{max-height:0;opacity:0;pointer-events:none}
 
-  /* VU Meter / Visualizer */
-  .visualizer-wrap {
-    width: 100%;
-    aspect-ratio: 2/1;
-    position: relative;
-    border-radius: 16px;
-    background: var(--surface);
-    border: 1px solid var(--ring);
-    overflow: hidden;
-  }
+/* Toggle */
+.toggle{width:40px;height:22px;border-radius:11px;background:var(--s3);border:1px solid var(--ring);cursor:pointer;position:relative;transition:all .3s;-webkit-appearance:none;appearance:none;outline:none;flex-shrink:0}
+.toggle::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--muted);transition:all .3s cubic-bezier(.4,0,.2,1)}
+.toggle:checked{background:var(--accent-dim);border-color:var(--accent)}
+.toggle:checked::after{left:20px;background:var(--accent);box-shadow:0 0 6px var(--accent-glow)}
 
-  .visualizer-wrap::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(180deg, transparent 60%, var(--bg) 100%);
-    z-index: 2;
-    pointer-events: none;
-  }
+/* Slider row */
+.slider-row{display:flex;align-items:center;gap:10px}
+.slider-row .sl-label{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.1em;width:56px;flex-shrink:0}
+.slider-row .sl-val{font-family:'Space Mono',monospace;font-size:10px;color:var(--accent);width:36px;text-align:right;flex-shrink:0}
+.slider-row input[type=range]{flex:1;-webkit-appearance:none;appearance:none;height:3px;background:var(--s3);border-radius:2px;outline:none}
+.slider-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 0 10px var(--accent-glow);border:2px solid var(--bg)}
+.slider-row input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 0 10px var(--accent-glow);border:2px solid var(--bg)}
 
-  canvas {
-    width: 100%;
-    height: 100%;
-    display: block;
-  }
+/* Calibrate button */
+.cal-btn{background:var(--s3);border:1px solid var(--ring);color:var(--amber);font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.12em;padding:7px 14px;border-radius:8px;cursor:pointer;transition:all .25s;-webkit-appearance:none;text-transform:uppercase;white-space:nowrap}
+.cal-btn:hover{border-color:var(--amber);background:var(--amber-dim)}
+.cal-btn:disabled{opacity:.4;cursor:not-allowed}
+.cal-btn.recording{border-color:var(--amber);background:var(--amber-dim);animation:rec-pulse 1s ease-in-out infinite}
+@keyframes rec-pulse{0%,100%{box-shadow:0 0 8px var(--amber-dim)}50%{box-shadow:0 0 20px var(--amber-glow)}}
+.cal-status{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);text-align:center;min-height:14px;transition:color .3s}
+.cal-status.ok{color:var(--accent)}
+.cal-status.rec{color:var(--amber)}
 
-  /* Level meter */
-  .level-bar-wrap {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
+/* Volume */
+.vol-row{display:flex;align-items:center;gap:10px}
+.vol-icon{width:18px;height:18px;color:var(--muted);flex-shrink:0}
+.vol-row input[type=range]{flex:1;-webkit-appearance:none;appearance:none;height:3px;background:var(--s3);border-radius:2px;outline:none}
+.vol-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 0 10px var(--accent-glow);border:2px solid var(--bg)}
+.vol-row input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 0 10px var(--accent-glow);border:2px solid var(--bg)}
+.vol-val{font-family:'Space Mono',monospace;font-size:10px;color:var(--accent);width:36px;text-align:right;flex-shrink:0}
 
-  .level-label {
-    font-family: 'Space Mono', monospace;
-    font-size: 10px;
-    color: var(--text-muted);
-    letter-spacing: 0.15em;
-    width: 28px;
-    flex-shrink: 0;
-  }
+/* Toggle row generic */
+.trow{display:flex;align-items:center;justify-content:space-between}
+.trow span{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.15em;text-transform:uppercase}
 
-  .level-track {
-    flex: 1;
-    height: 6px;
-    background: var(--surface-2);
-    border-radius: 3px;
-    overflow: hidden;
-    position: relative;
-  }
+/* Devices */
+.dev-row{display:flex;align-items:center;gap:8px}
+.dev-row label{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.1em;width:36px;flex-shrink:0;text-transform:uppercase}
+.dev-sel{flex:1;background:var(--s2);border:1px solid var(--ring);border-radius:7px;color:var(--text);font-family:'Outfit',sans-serif;font-size:11px;padding:7px 10px;outline:none;-webkit-appearance:none;appearance:none;cursor:pointer}
+.dev-sel:focus{border-color:var(--accent)}
 
-  .level-fill {
-    height: 100%;
-    width: 0%;
-    border-radius: 3px;
-    background: var(--accent);
-    box-shadow: 0 0 12px var(--accent-glow);
-    transition: width 0.06s linear;
-  }
+/* Info */
+.info-bar{width:100%;display:flex;justify-content:center;gap:20px}
+.info-item{font-family:'Space Mono',monospace;font-size:8px;color:var(--muted);opacity:.5;letter-spacing:.1em}
+.info-item span{color:var(--accent);opacity:.8}
 
-  .level-fill.hot {
-    background: var(--danger);
-    box-shadow: 0 0 12px var(--danger-glow);
-  }
-
-  .level-db {
-    font-family: 'Space Mono', monospace;
-    font-size: 10px;
-    color: var(--text-muted);
-    width: 40px;
-    text-align: right;
-    flex-shrink: 0;
-  }
-
-  /* Main button */
-  .power-btn {
-    width: 120px;
-    height: 120px;
-    border-radius: 50%;
-    border: 2px solid var(--ring);
-    background: var(--surface);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
-    outline: none;
-    -webkit-appearance: none;
-  }
-
-  .power-btn::before {
-    content: '';
-    position: absolute;
-    inset: -6px;
-    border-radius: 50%;
-    border: 1px solid transparent;
-    transition: border-color 0.3s ease;
-  }
-
-  .power-btn .icon {
-    width: 40px;
-    height: 40px;
-    transition: all 0.3s ease;
-  }
-
-  .power-btn .icon-mic {
-    display: block;
-  }
-  .power-btn .icon-stop {
-    display: none;
-  }
-
-  .power-btn:hover {
-    border-color: var(--accent);
-    box-shadow: 0 0 30px var(--accent-dim);
-  }
-
-  .power-btn:active {
-    transform: scale(0.95);
-  }
-
-  /* Active state */
-  .power-btn.active {
-    border-color: var(--accent);
-    background: #00ffc810;
-    box-shadow:
-      0 0 40px var(--accent-dim),
-      inset 0 0 30px #00ffc808;
-    animation: pulse-ring 2s ease-in-out infinite;
-  }
-
-  .power-btn.active::before {
-    border-color: var(--accent-dim);
-  }
-
-  .power-btn.active .icon-mic { display: none; }
-  .power-btn.active .icon-stop { display: block; }
-
-  @keyframes pulse-ring {
-    0%, 100% { box-shadow: 0 0 40px var(--accent-dim), inset 0 0 30px #00ffc808; }
-    50% { box-shadow: 0 0 60px var(--accent-glow), inset 0 0 40px #00ffc812; }
-  }
-
-  .status-text {
-    font-family: 'Space Mono', monospace;
-    font-size: 12px;
-    letter-spacing: 0.2em;
-    color: var(--text-muted);
-    transition: color 0.3s ease;
-  }
-  .status-text.on {
-    color: var(--accent);
-  }
-
-  /* Volume slider */
-  .volume-section {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .volume-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .volume-header label {
-    font-family: 'Space Mono', monospace;
-    font-size: 10px;
-    color: var(--text-muted);
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-  }
-
-  .volume-value {
-    font-family: 'Space Mono', monospace;
-    font-size: 11px;
-    color: var(--accent);
-  }
-
-  .slider-wrap {
-    position: relative;
-    width: 100%;
-    height: 36px;
-    display: flex;
-    align-items: center;
-  }
-
-  input[type="range"] {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 100%;
-    height: 4px;
-    background: var(--surface-2);
-    border-radius: 2px;
-    outline: none;
-    position: relative;
-  }
-
-  input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    background: var(--accent);
-    cursor: pointer;
-    box-shadow: 0 0 12px var(--accent-glow);
-    border: 2px solid var(--bg);
-    transition: box-shadow 0.2s ease;
-  }
-
-  input[type="range"]::-webkit-slider-thumb:active {
-    box-shadow: 0 0 20px var(--accent);
-  }
-
-  input[type="range"]::-moz-range-thumb {
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    background: var(--accent);
-    cursor: pointer;
-    box-shadow: 0 0 12px var(--accent-glow);
-    border: 2px solid var(--bg);
-  }
-
-  /* Device selectors */
-  .devices {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .device-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .device-row label {
-    font-family: 'Space Mono', monospace;
-    font-size: 10px;
-    color: var(--text-muted);
-    letter-spacing: 0.1em;
-    width: 56px;
-    flex-shrink: 0;
-    text-transform: uppercase;
-  }
-
-  .device-select {
-    flex: 1;
-    background: var(--surface);
-    border: 1px solid var(--ring);
-    border-radius: 8px;
-    color: var(--text);
-    font-family: 'Outfit', sans-serif;
-    font-size: 12px;
-    padding: 8px 12px;
-    outline: none;
-    -webkit-appearance: none;
-    appearance: none;
-    cursor: pointer;
-    transition: border-color 0.2s ease;
-  }
-
-  .device-select:focus {
-    border-color: var(--accent);
-  }
-
-  /* Monitor toggle */
-  .toggle-row {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 4px 0;
-  }
-
-  .toggle-row span {
-    font-family: 'Space Mono', monospace;
-    font-size: 10px;
-    color: var(--text-muted);
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-  }
-
-  .toggle {
-    width: 44px;
-    height: 24px;
-    border-radius: 12px;
-    background: var(--surface-2);
-    border: 1px solid var(--ring);
-    cursor: pointer;
-    position: relative;
-    transition: all 0.3s ease;
-    -webkit-appearance: none;
-    appearance: none;
-    outline: none;
-  }
-
-  .toggle::after {
-    content: '';
-    position: absolute;
-    top: 2px;
-    left: 2px;
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    background: var(--text-muted);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .toggle:checked {
-    background: var(--accent-dim);
-    border-color: var(--accent);
-  }
-
-  .toggle:checked::after {
-    left: 22px;
-    background: var(--accent);
-    box-shadow: 0 0 8px var(--accent-glow);
-  }
-
-  /* Latency info */
-  .info-bar {
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    gap: 24px;
-    padding-top: 4px;
-  }
-
-  .info-item {
-    font-family: 'Space Mono', monospace;
-    font-size: 9px;
-    color: var(--text-muted);
-    opacity: 0.6;
-    letter-spacing: 0.1em;
-  }
-
-  .info-item span {
-    color: var(--accent);
-    opacity: 0.8;
-  }
-
-  /* Error overlay */
-  .error-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: #0a0a0fee;
-    z-index: 100;
-    align-items: center;
-    justify-content: center;
-    padding: 30px;
-  }
-
-  .error-overlay.show {
-    display: flex;
-  }
-
-  .error-box {
-    background: var(--surface);
-    border: 1px solid var(--danger);
-    border-radius: 16px;
-    padding: 30px;
-    text-align: center;
-    max-width: 340px;
-  }
-
-  .error-box h2 {
-    color: var(--danger);
-    font-size: 16px;
-    margin-bottom: 12px;
-  }
-
-  .error-box p {
-    color: var(--text-muted);
-    font-size: 13px;
-    line-height: 1.6;
-    margin-bottom: 20px;
-  }
-
-  .error-box button {
-    background: var(--danger);
-    color: #fff;
-    border: none;
-    border-radius: 8px;
-    padding: 10px 28px;
-    font-family: 'Space Mono', monospace;
-    font-size: 12px;
-    letter-spacing: 0.1em;
-    cursor: pointer;
-  }
-
-  /* Grain overlay */
-  .grain {
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    z-index: 50;
-    opacity: 0.03;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-    background-repeat: repeat;
-    background-size: 256px 256px;
-  }
+/* Error */
+.err-overlay{display:none;position:fixed;inset:0;background:#08080eee;z-index:1000;align-items:center;justify-content:center;padding:24px}
+.err-overlay.show{display:flex}
+.err-box{background:var(--s1);border:1px solid var(--danger);border-radius:14px;padding:28px;text-align:center;max-width:320px}
+.err-box h2{color:var(--danger);font-size:15px;margin-bottom:10px}
+.err-box p{color:var(--muted);font-size:12px;line-height:1.6;margin-bottom:18px}
+.err-box button{background:var(--danger);color:#fff;border:none;border-radius:8px;padding:9px 24px;font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.1em;cursor:pointer}
 </style>
 </head>
 <body>
-
 <div class="grain"></div>
-
 <div class="app">
   <div class="header">
     <h1>Audio Passthrough</h1>
-    <div class="subtitle">实时音频直通监听</div>
+    <div class="sub">实时音频直通 · 降噪监听</div>
   </div>
 
-  <div class="visualizer-wrap">
-    <canvas id="viz"></canvas>
+  <div class="viz-wrap"><canvas id="viz"></canvas></div>
+
+  <div class="level-row">
+    <span class="lbl">IN</span>
+    <div class="level-track"><div class="level-fill" id="lvlFill"></div></div>
+    <span class="level-db" id="lvlDb">-∞ dB</span>
   </div>
 
-  <div class="level-bar-wrap">
-    <span class="level-label">IN</span>
-    <div class="level-track">
-      <div class="level-fill" id="levelFill"></div>
-    </div>
-    <span class="level-db" id="levelDb">-∞ dB</span>
-  </div>
-
-  <button class="power-btn" id="powerBtn" aria-label="开始/停止">
-    <svg class="icon icon-mic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--accent)">
-      <rect x="9" y="1" width="6" height="12" rx="3"/>
-      <path d="M5 10a7 7 0 0 0 14 0"/>
-      <line x1="12" y1="17" x2="12" y2="21"/>
-      <line x1="8" y1="21" x2="16" y2="21"/>
-    </svg>
-    <svg class="icon icon-stop" viewBox="0 0 24 24" fill="currentColor" style="color:var(--accent)">
-      <rect x="6" y="6" width="12" height="12" rx="2"/>
-    </svg>
+  <button class="power-btn" id="pwrBtn">
+    <svg class="ico-mic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="9" y="1" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="17" x2="12" y2="21"/><line x1="8" y1="21" x2="16" y2="21"/></svg>
+    <svg class="ico-stop" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
   </button>
+  <span class="status" id="statusTxt">点击开始</span>
 
-  <span class="status-text" id="statusText">点击开始</span>
-
-  <div class="volume-section">
-    <div class="volume-header">
-      <label>输出音量</label>
-      <span class="volume-value" id="volValue">100%</span>
+  <!-- Noise Reduction Panel -->
+  <div class="panel" id="nrPanel">
+    <div class="nr-toggle-row">
+      <span class="panel-title">降噪 Noise Reduction</span>
+      <input type="checkbox" class="toggle" id="nrToggle" checked>
     </div>
-    <div class="slider-wrap">
+    <div class="nr-controls" id="nrControls">
+      <div class="slider-row">
+        <span class="sl-label">降噪强度</span>
+        <input type="range" id="nrStrength" min="0" max="100" value="60">
+        <span class="sl-val" id="nrStrVal">60%</span>
+      </div>
+      <div class="slider-row">
+        <span class="sl-label">噪声门限</span>
+        <input type="range" id="gateThresh" min="-80" max="-10" value="-45">
+        <span class="sl-val" id="gateVal">-45dB</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="cal-btn" id="calBtn">校准噪声</button>
+        <span class="cal-status" id="calStatus">点击校准以采集环境噪声</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Volume Panel -->
+  <div class="panel">
+    <span class="panel-title">输出 Output</span>
+    <div class="vol-row">
+      <svg class="vol-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
       <input type="range" id="volSlider" min="0" max="200" value="100">
+      <span class="vol-val" id="volVal">100%</span>
+    </div>
+    <div class="trow">
+      <span>实时监听 Monitor</span>
+      <input type="checkbox" class="toggle" id="monToggle" checked>
     </div>
   </div>
 
-  <div class="toggle-row">
-    <span>实时监听</span>
-    <input type="checkbox" class="toggle" id="monitorToggle" checked>
-  </div>
-
-  <div class="devices">
-    <div class="device-row">
+  <!-- Devices -->
+  <div class="panel">
+    <span class="panel-title">设备 Devices</span>
+    <div class="dev-row">
       <label>输入</label>
-      <select class="device-select" id="inputSelect"><option>默认麦克风</option></select>
+      <select class="dev-sel" id="inSel"><option>默认麦克风</option></select>
     </div>
-    <div class="device-row">
+    <div class="dev-row">
       <label>输出</label>
-      <select class="device-select" id="outputSelect"><option>默认扬声器</option></select>
+      <select class="dev-sel" id="outSel"><option>默认扬声器</option></select>
     </div>
   </div>
 
   <div class="info-bar">
-    <div class="info-item">延迟 <span id="latencyInfo">--</span></div>
-    <div class="info-item">采样率 <span id="sampleRate">--</span></div>
+    <div class="info-item">延迟 <span id="latInfo">--</span></div>
+    <div class="info-item">采样 <span id="srInfo">--</span></div>
+    <div class="info-item">FFT <span>256</span></div>
   </div>
 </div>
 
-<div class="error-overlay" id="errorOverlay">
-  <div class="error-box">
+<div class="err-overlay" id="errOvl">
+  <div class="err-box">
     <h2>无法访问麦克风</h2>
-    <p id="errorMsg">请在浏览器设置中允许麦克风权限，然后重试。</p>
-    <button id="errorClose">知道了</button>
+    <p id="errMsg">请在浏览器设置中允许麦克风权限，然后重试。</p>
+    <button id="errClose">知道了</button>
   </div>
 </div>
 
 <script>
-(() => {
-  const powerBtn = document.getElementById('powerBtn');
-  const statusText = document.getElementById('statusText');
-  const volSlider = document.getElementById('volSlider');
-  const volValue = document.getElementById('volValue');
-  const monitorToggle = document.getElementById('monitorToggle');
-  const inputSelect = document.getElementById('inputSelect');
-  const outputSelect = document.getElementById('outputSelect');
-  const levelFill = document.getElementById('levelFill');
-  const levelDb = document.getElementById('levelDb');
-  const latencyInfo = document.getElementById('latencyInfo');
-  const sampleRateEl = document.getElementById('sampleRate');
-  const errorOverlay = document.getElementById('errorOverlay');
-  const errorMsg = document.getElementById('errorMsg');
-  const errorClose = document.getElementById('errorClose');
-  const canvas = document.getElementById('viz');
-  const ctx = canvas.getContext('2d');
-
-  let audioCtx = null;
-  let sourceNode = null;
-  let gainNode = null;
-  let analyserNode = null;
-  let stream = null;
-  let isActive = false;
-  let animFrame = null;
-  let dataArray = null;
-
-  // Device enumeration
-  async function enumerateDevices() {
-    try {
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const audioInputs = devices.filter(d => d.kind === 'audioinput');
-      const audioOutputs = devices.filter(d => d.kind === 'audiooutput');
-
-      inputSelect.innerHTML = '';
-      audioInputs.forEach((d, i) => {
-        const opt = document.createElement('option');
-        opt.value = d.deviceId;
-        opt.textContent = d.label || `麦克风 ${i + 1}`;
-        inputSelect.appendChild(opt);
-      });
-      if (audioInputs.length === 0) {
-        inputSelect.innerHTML = '<option>未找到麦克风</option>';
-      }
-
-      outputSelect.innerHTML = '';
-      audioOutputs.forEach((d, i) => {
-        const opt = document.createElement('option');
-        opt.value = d.deviceId;
-        opt.textContent = d.label || `扬声器 ${i + 1}`;
-        outputSelect.appendChild(opt);
-      });
-      if (audioOutputs.length === 0) {
-        outputSelect.innerHTML = '<option>未找到输出设备</option>';
-      }
-    } catch (e) {
-      console.warn('enumerateDevices failed:', e);
+// ═══════════════════════════════════════════════════
+//  AudioWorklet Processor Code (embedded as Blob URL)
+// ═══════════════════════════════════════════════════
+const WORKLET_CODE = `
+class FFT {
+  constructor(n) {
+    this.N = n;
+    this.half = n >> 1;
+    this.cos = new Float32Array(this.half);
+    this.sin = new Float32Array(this.half);
+    for (let i = 0; i < this.half; i++) {
+      this.cos[i] = Math.cos(-2 * Math.PI * i / n);
+      this.sin[i] = Math.sin(-2 * Math.PI * i / n);
+    }
+    this.rev = new Uint32Array(n);
+    let bits = Math.round(Math.log2(n));
+    for (let i = 0; i < n; i++) {
+      let v = i, r = 0;
+      for (let j = 0; j < bits; j++) { r = (r << 1) | (v & 1); v >>= 1; }
+      this.rev[i] = r;
     }
   }
-
-  // Canvas resize
-  function resizeCanvas() {
-    const rect = canvas.parentElement.getBoundingClientRect();
-    canvas.width = rect.width * window.devicePixelRatio;
-    canvas.height = rect.height * window.devicePixelRatio;
-    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
-  }
-  resizeCanvas();
-  window.addEventListener('resize', resizeCanvas);
-
-  // Visualizer
-  function drawVisualizer() {
-    if (!isActive || !analyserNode) {
-      animFrame = requestAnimationFrame(drawVisualizer);
-      return;
+  forward(re, im) {
+    const n = this.N, rev = this.rev, cos = this.cos, sin = this.sin;
+    for (let i = 0; i < n; i++) {
+      if (i < rev[i]) { let tr = re[i]; re[i] = re[rev[i]]; re[rev[i]] = tr; tr = im[i]; im[i] = im[rev[i]]; im[rev[i]] = tr; }
     }
-
-    const w = canvas.width / window.devicePixelRatio;
-    const h = canvas.height / window.devicePixelRatio;
-    ctx.clearRect(0, 0, w, h);
-
-    analyserNode.getByteFrequencyData(dataArray);
-
-    const barCount = 64;
-    const barWidth = w / barCount;
-    const gap = 2;
-
-    for (let i = 0; i < barCount; i++) {
-      const dataIndex = Math.floor(i * dataArray.length / barCount);
-      const value = dataArray[dataIndex] / 255;
-      const barH = Math.max(2, value * h * 0.85);
-
-      const x = i * barWidth;
-      const y = h - barH;
-
-      const gradient = ctx.createLinearGradient(x, y, x, h);
-      gradient.addColorStop(0, '#00ffc8');
-      gradient.addColorStop(0.6, '#00ffc888');
-      gradient.addColorStop(1, '#00ffc822');
-
-      ctx.fillStyle = gradient;
-      ctx.beginPath();
-      ctx.roundRect(x + gap / 2, y, barWidth - gap, barH, [2, 2, 0, 0]);
-      ctx.fill();
-    }
-
-    // Waveform overlay
-    analyserNode.getByteTimeDomainData(dataArray);
-    ctx.beginPath();
-    ctx.strokeStyle = '#00ffc844';
-    ctx.lineWidth = 1.5;
-    const sliceWidth = w / dataArray.length;
-    let x = 0;
-    for (let i = 0; i < dataArray.length; i++) {
-      const v = dataArray[i] / 128.0;
-      const y = (v * h) / 2;
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-      x += sliceWidth;
-    }
-    ctx.stroke();
-
-    // Level meter
-    let sum = 0;
-    analyserNode.getByteTimeDomainData(dataArray);
-    for (let i = 0; i < dataArray.length; i++) {
-      const val = (dataArray[i] - 128) / 128;
-      sum += val * val;
-    }
-    const rms = Math.sqrt(sum / dataArray.length);
-    const db = rms > 0 ? (20 * Math.log10(rms)).toFixed(1) : '-∞';
-    const pct = Math.min(100, rms * 300);
-
-    levelFill.style.width = pct + '%';
-    levelFill.classList.toggle('hot', pct > 85);
-    levelDb.textContent = (rms > 0.001 ? db : '-∞') + ' dB';
-
-    animFrame = requestAnimationFrame(drawVisualizer);
-  }
-
-  // Start audio
-  async function startAudio() {
-    try {
-      const constraints = {
-        audio: {
-          deviceId: inputSelect.value && inputSelect.value !== 'default'
-            ? { exact: inputSelect.value }
-            : undefined,
-          echoCancellation: false,
-          noiseSuppression: false,
-          autoGainControl: false,
-          latency: 0
-        }
-      };
-
-      stream = await navigator.mediaDevices.getUserMedia(constraints);
-
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)({
-        latencyHint: 'interactive'
-      });
-
-      sourceNode = audioCtx.createMediaStreamSource(stream);
-      gainNode = audioCtx.createGain();
-      gainNode.gain.value = volSlider.value / 100;
-
-      analyserNode = audioCtx.createAnalyser();
-      analyserNode.fftSize = 256;
-      analyserNode.smoothingTimeConstant = 0.7;
-
-      dataArray = new Uint8Array(analyserNode.frequencyBinCount);
-
-      // Connect: source -> gain -> analyser -> destination (if monitoring)
-      sourceNode.connect(gainNode);
-      gainNode.connect(analyserNode);
-
-      if (monitorToggle.checked) {
-        analyserNode.connect(audioCtx.destination);
-      }
-
-      // Try to set output device
-      if (typeof audioCtx.setSinkId === 'function' && outputSelect.value) {
-        try {
-          await audioCtx.setSinkId(outputSelect.value);
-        } catch (e) {
-          console.warn('setSinkId not supported or failed:', e);
+    for (let size = 2; size <= n; size <<= 1) {
+      let hs = size >> 1, step = n / size;
+      for (let i = 0; i < n; i += size) {
+        for (let j = 0; j < hs; j++) {
+          let k = j * step, tRe = cos[k], tIm = sin[k];
+          let t1 = re[i+j+hs]*tRe - im[i+j+hs]*tIm;
+          let t2 = re[i+j+hs]*tIm + im[i+j+hs]*tRe;
+          re[i+j+hs] = re[i+j]-t1; im[i+j+hs] = im[i+j]-t2;
+          re[i+j] += t1; im[i+j] += t2;
         }
       }
+    }
+  }
+  inverse(re, im) {
+    const n = this.N;
+    for (let i = 0; i < n; i++) im[i] = -im[i];
+    this.forward(re, im);
+    const inv = 1/n;
+    for (let i = 0; i < n; i++) { re[i] *= inv; im[i] = -im[i] * inv; }
+  }
+}
 
-      isActive = true;
-      powerBtn.classList.add('active');
-      statusText.textContent = '监听中';
-      statusText.classList.add('on');
+class NoiseReduceProc extends AudioWorkletProcessor {
+  constructor() {
+    super();
+    this.FFT_N = 256;
+    this.HOP  = 128;
+    this.fft  = new FFT(this.FFT_N);
+    this.inBuf  = new Float32Array(this.FFT_N);
+    this.outBuf = new Float32Array(this.FFT_N);
+    this.outPos = 0;
+    this.inLen  = 0;
+    this.re  = new Float32Array(this.FFT_N);
+    this.im  = new Float32Array(this.FFT_N);
+    this.mag = new Float32Array(this.HOP + 1);
+    this.prevGain = new Float32Array(this.HOP + 1);
+    this.prevGain.fill(1);
+    this.noise  = new Float32Array(this.HOP + 1);
+    this.window = new Float32Array(this.FFT_N);
+    for (let i = 0; i < this.FFT_N; i++)
+      this.window[i] = 0.5 * (1 - Math.cos(2 * Math.PI * i / this.FFT_N));
+    this.enabled    = true;
+    this.nrStrength = 0.6;
+    this.noiseFloor = 0.01;
+    this.gateDb     = -45;
+    this.gateCoeff  = Math.pow(10, this.gateDb / 20);
+    this.alphaRise  = 0.7;
+    this.alphaFall  = 0.94;
+    this.calibrating = false;
+    this.calFrames  = 0;
+    this.calAccum   = new Float32Array(this.HOP + 1);
+    this.port.onmessage = (e) => this.onMsg(e.data);
+  }
 
-      sampleRateEl.textContent = audioCtx.sampleRate + ' Hz';
-      latencyInfo.textContent = Math.round((audioCtx.baseLatency || 0) * 1000) + ' ms';
+  onMsg(d) {
+    if (d.type === 'nrStrength')   this.nrStrength = d.value;
+    if (d.type === 'noiseFloor')   this.noiseFloor = d.value;
+    if (d.type === 'gateDb')       { this.gateDb = d.value; this.gateCoeff = Math.pow(10, d.value / 20); }
+    if (d.type === 'setEnabled')   this.enabled = d.value;
+    if (d.type === 'calibrate')    { this.calibrating = true; this.calFrames = 0; this.calAccum.fill(0); }
+    if (d.type === 'setNoise')     this.noise.set(d.value);
+  }
 
-      drawVisualizer();
-      enumerateDevices();
-
-    } catch (err) {
-      console.error('Audio start failed:', err);
-      errorMsg.textContent = err.message || '请在浏览器设置中允许麦克风权限，然后重试。';
-      errorOverlay.classList.add('show');
-      stopAudio();
+  calibrateFrame() {
+    const half = this.HOP + 1;
+    for (let i = 0; i < half; i++) this.calAccum[i] += this.mag[i];
+    this.calFrames++;
+    if (this.calFrames >= 90) {
+      for (let i = 0; i < half; i++) this.noise[i] = this.calAccum[i] / this.calFrames;
+      this.calibrating = false;
+      this.port.postMessage({ type: 'calDone', noise: Array.from(this.noise) });
     }
   }
 
-  // Stop audio
-  function stopAudio() {
-    isActive = false;
+  processFrame() {
+    const N = this.FFT_N, H = this.HOP, half = H + 1;
+    const re = this.re, im = this.im, mag = this.mag;
+    const noise = this.noise, prevG = this.prevGain;
+    const win = this.window, str = this.nrStrength, floor = this.noiseFloor;
+    const gCoeff = this.gateCoeff, aR = this.alphaRise, aF = this.alphaFall;
 
-    if (animFrame) cancelAnimationFrame(animFrame);
+    re.set(this.inBuf); im.fill(0);
+    for (let i = 0; i < N; i++) { re[i] *= win[i]; }
+    this.fft.forward(re, im);
 
-    if (sourceNode) {
-      sourceNode.disconnect();
-      sourceNode = null;
-    }
-    if (gainNode) {
-      gainNode.disconnect();
-      gainNode = null;
-    }
-    if (analyserNode) {
-      analyserNode.disconnect();
-      analyserNode = null;
-    }
-    if (audioCtx) {
-      audioCtx.close();
-      audioCtx = null;
-    }
-    if (stream) {
-      stream.getTracks().forEach(t => t.stop());
-      stream = null;
-    }
+    // magnitude
+    for (let i = 0; i < half; i++) mag[i] = Math.sqrt(re[i]*re[i] + im[i]*im[i]);
 
-    powerBtn.classList.remove('active');
-    statusText.textContent = '点击开始';
-    statusText.classList.remove('on');
-    levelFill.style.width = '0%';
-    levelDb.textContent = '-∞ dB';
-    latencyInfo.textContent = '--';
-    sampleRateEl.textContent = '--';
+    // calibrate?
+    if (this.calibrating) { this.calibrateFrame(); return; }
 
-    // Clear canvas
-    const w = canvas.width / window.devicePixelRatio;
-    const h = canvas.height / window.devicePixelRatio;
-    ctx.clearRect(0, 0, w, h);
-  }
-
-  // Events
-  powerBtn.addEventListener('click', () => {
-    // Resume AudioContext on user gesture (required for iOS)
-    if (isActive) {
-      stopAudio();
-    } else {
-      startAudio();
-    }
-  });
-
-  volSlider.addEventListener('input', () => {
-    const val = volSlider.value;
-    volValue.textContent = val + '%';
-    if (gainNode) {
-      gainNode.gain.value = val / 100;
-    }
-  });
-
-  monitorToggle.addEventListener('change', () => {
-    if (!analyserNode || !audioCtx) return;
-    if (monitorToggle.checked) {
-      analyserNode.connect(audioCtx.destination);
-    } else {
-      try { analyserNode.disconnect(audioCtx.destination); } catch(e) {}
-    }
-  });
-
-  outputSelect.addEventListener('change', async () => {
-    if (audioCtx && typeof audioCtx.setSinkId === 'function') {
-      try {
-        await audioCtx.setSinkId(outputSelect.value);
-      } catch (e) {
-        console.warn('setSinkId failed:', e);
+    // noise gate (frequency-domain per-bin)
+    let below = true;
+    for (let i = 1; i < half; i++) { if (mag[i] > gCoeff * 20) { below = false; break; } }
+    if (below) { for (let i = 0; i < half; i++) { re[i] = 0; im[i] = 0; } }
+    else {
+      // spectral subtraction
+      for (let i = 1; i < half; i++) {
+        let nPow = noise[i] * noise[i] * (1 + str * 4);
+        let sPow = mag[i] * mag[i];
+        let g = Math.sqrt(Math.max(sPow - nPow, sPow * floor) / (sPow + 1e-10));
+        // temporal smoothing
+        g = Math.max(0.02, g);
+        g = (g < prevG[i]) ? aF * prevG[i] + (1 - aF) * g : aR * prevG[i] + (1 - aR) * g;
+        prevG[i] = g;
+        re[i] *= g; im[i] *= g;
+        if (i > 0) { re[N-i] *= g; im[N-i] *= g; }
       }
     }
-  });
 
-  inputSelect.addEventListener('change', () => {
-    if (isActive) {
-      stopAudio();
-      startAudio();
+    this.fft.inverse(re, im);
+    for (let i = 0; i < N; i++) this.outBuf[i] += re[i] * win[i];
+  }
+
+  process(inputs, outputs) {
+    const inp = inputs[0], out = outputs[0];
+    if (!inp || !inp[0] || !out || !out[0]) return true;
+    const iData = inp[0], oData = out[0], bs = iData.length;
+
+    // shift input buffer
+    const remain = this.FFT_N - bs;
+    for (let i = 0; i < remain; i++) this.inBuf[i] = this.inBuf[i + bs];
+    for (let i = 0; i < bs; i++) this.inBuf[remain + i] = iData[i];
+    this.inLen = Math.min(this.FFT_N, this.inLen + bs);
+
+    if (this.inLen >= this.FFT_N) this.processFrame();
+
+    // output from overlap buffer
+    for (let i = 0; i < bs; i++) {
+      if (this.outPos < this.FFT_N) {
+        oData[i] = this.enabled ? this.outBuf[this.outPos] : this.inBuf[remain + i];
+      } else {
+        oData[i] = this.enabled ? 0 : iData[i];
+      }
+      this.outPos++;
     }
-  });
 
-  errorClose.addEventListener('click', () => {
-    errorOverlay.classList.remove('show');
-  });
+    // shift output buffer
+    if (this.outPos >= this.HOP) {
+      const shift = this.HOP;
+      const len = this.FFT_N - shift;
+      for (let i = 0; i < len; i++) this.outBuf[i] = this.outBuf[i + shift];
+      for (let i = len; i < this.FFT_N; i++) this.outBuf[i] = 0;
+      this.outPos -= shift;
+    }
+    return true;
+  }
+}
+registerProcessor('noise-reduce', NoiseReduceProc);
+`;
 
-  // Init: request permission first to enumerate labeled devices
-  navigator.mediaDevices.getUserMedia({ audio: true })
-    .then(s => {
-      s.getTracks().forEach(t => t.stop());
-      enumerateDevices();
-    })
-    .catch(() => {
-      enumerateDevices();
-    });
+// ═══════════════════════════════════════════════════
+//  Main Application
+// ═══════════════════════════════════════════════════
+const $ = id => document.getElementById(id);
+const pwrBtn   = $('pwrBtn');
+const statusTxt= $('statusTxt');
+const nrToggle = $('nrToggle');
+const nrCtrl   = $('nrControls');
+const nrStr    = $('nrStrength');
+const nrStrVal = $('nrStrVal');
+const gateTh   = $('gateThresh');
+const gateVal  = $('gateVal');
+const calBtn   = $('calBtn');
+const calStat  = $('calStatus');
+const volSl    = $('volSlider');
+const volVal   = $('volVal');
+const monTog   = $('monToggle');
+const inSel    = $('inSel');
+const outSel   = $('outSel');
+const lvlFill  = $('lvlFill');
+const lvlDb    = $('lvlDb');
+const latInfo  = $('latInfo');
+const srInfo   = $('srInfo');
+const canvas   = $('viz');
+const cCtx     = canvas.getContext('2d');
+const errOvl   = $('errOvl');
+const errMsg   = $('errMsg');
+const errClose = $('errClose');
 
-  // Draw empty state
-  drawVisualizer();
-})();
+let actx = null, srcNode = null, gainNode = null, analyser = null;
+let nrNode = null, lpFilter = null, hpFilter = null, notchFilter = null;
+let stream = null, active = false, animId = null, freqData = null;
+
+// ── Canvas ──
+function resizeCanvas() {
+  const r = canvas.parentElement.getBoundingClientRect();
+  canvas.width = r.width * devicePixelRatio;
+  canvas.height = r.height * devicePixelRatio;
+  cCtx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+// ── Devices ──
+async function enumDevices() {
+  try {
+    const devs = await navigator.mediaDevices.enumerateDevices();
+    const ins = devs.filter(d => d.kind === 'audioinput');
+    const outs = devs.filter(d => d.kind === 'audiooutput');
+    inSel.innerHTML = '';
+    ins.forEach((d, i) => { const o = document.createElement('option'); o.value = d.deviceId; o.textContent = d.label || `麦克风 ${i+1}`; inSel.appendChild(o); });
+    if (!ins.length) inSel.innerHTML = '<option>未找到</option>';
+    outSel.innerHTML = '';
+    outs.forEach((d, i) => { const o = document.createElement('option'); o.value = d.deviceId; o.textContent = d.label || `扬声器 ${i+1}`; outSel.appendChild(o); });
+    if (!outs.length) outSel.innerHTML = '<option>未找到</option>';
+  } catch(e) { console.warn(e); }
+}
+
+// ── Visualizer ──
+function drawViz() {
+  if (!active || !analyser) { animId = requestAnimationFrame(drawViz); return; }
+  const w = canvas.width / devicePixelRatio, h = canvas.height / devicePixelRatio;
+  cCtx.clearRect(0, 0, w, h);
+  analyser.getByteFrequencyData(freqData);
+
+  const bars = 48, bw = w / bars, gap = 2;
+  for (let i = 0; i < bars; i++) {
+    const di = Math.floor(i * freqData.length / bars);
+    const v = freqData[di] / 255;
+    const bh = Math.max(1.5, v * h * 0.88);
+    const x = i * bw, y = h - bh;
+    const g = cCtx.createLinearGradient(x, y, x, h);
+    g.addColorStop(0, '#00ffc8');
+    g.addColorStop(0.5, '#00ffc888');
+    g.addColorStop(1, '#00ffc818');
+    cCtx.fillStyle = g;
+    cCtx.beginPath();
+    cCtx.roundRect(x + gap/2, y, bw - gap, bh, [1.5, 1.5, 0, 0]);
+    cCtx.fill();
+  }
+
+  // waveform
+  const td = new Uint8Array(analyser.frequencyBinCount);
+  analyser.getByteTimeDomainData(td);
+  cCtx.beginPath();
+  cCtx.strokeStyle = '#00ffc830';
+  cCtx.lineWidth = 1.2;
+  const sl = w / td.length;
+  let px = 0;
+  for (let i = 0; i < td.length; i++) {
+    const y = (td[i] / 128) * h / 2;
+    i === 0 ? cCtx.moveTo(px, y) : cCtx.lineTo(px, y);
+    px += sl;
+  }
+  cCtx.stroke();
+
+  // level
+  let sum = 0;
+  for (let i = 0; i < td.length; i++) { const v = (td[i]-128)/128; sum += v*v; }
+  const rms = Math.sqrt(sum / td.length);
+  const db = rms > 0.0005 ? (20*Math.log10(rms)).toFixed(1) : '-∞';
+  const pct = Math.min(100, rms * 280);
+  lvlFill.style.width = pct + '%';
+  lvlFill.classList.toggle('hot', pct > 82);
+  lvlDb.textContent = (rms > 0.0005 ? db : '-∞') + ' dB';
+
+  animId = requestAnimationFrame(drawViz);
+}
+
+// ── Start ──
+async function start() {
+  try {
+    const constraints = {
+      audio: {
+        deviceId: inSel.value && inSel.value !== 'default' ? { exact: inSel.value } : undefined,
+        echoCancellation: false, noiseSuppression: false, autoGainControl: false, latency: 0
+      }
+    };
+    stream = await navigator.mediaDevices.getUserMedia(constraints);
+
+    actx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
+
+    // Load AudioWorklet
+    const blob = new Blob([WORKLET_CODE], { type: 'application/javascript' });
+    const url = URL.createObjectURL(blob);
+    await actx.audioWorklet.addModule(url);
+    URL.revokeObjectURL(url);
+
+    // Nodes
+    srcNode = actx.createMediaStreamSource(stream);
+    nrNode  = new AudioWorkletNode(actx, 'noise-reduce');
+    hpFilter  = actx.createBiquadFilter(); hpFilter.type = 'highpass';  hpFilter.frequency.value = 80;  hpFilter.Q.value = 0.7;
+    notchFilter = actx.createBiquadFilter(); notchFilter.type = 'notch'; notchFilter.frequency.value = 50; notchFilter.Q.value = 4;
+    lpFilter  = actx.createBiquadFilter(); lpFilter.type = 'lowpass';   lpFilter.frequency.value = 14000; lpFilter.Q.value = 0.5;
+    gainNode  = actx.createGain(); gainNode.gain.value = volSl.value / 100;
+    analyser  = actx.createAnalyser(); analyser.fftSize = 256; analyser.smoothingTimeConstant = 0.72;
+    freqData  = new Uint8Array(analyser.frequencyBinCount);
+
+    // Chain: src -> NR -> hp -> notch -> lp -> gain -> analyser -> dest
+    srcNode.connect(nrNode);
+    nrNode.connect(hpFilter);
+    hpFilter.connect(notchFilter);
+    notchFilter.connect(lpFilter);
+    lpFilter.connect(gainNode);
+    gainNode.connect(analyser);
+
+    if (monTog.checked) analyser.connect(actx.destination);
+
+    // Set output device
+    if (typeof actx.setSinkId === 'function' && outSel.value) {
+      try { await actx.setSinkId(outSel.value); } catch(e) {}
+    }
+
+    // Send initial NR params
+    sendNRParams();
+
+    active = true;
+    pwrBtn.classList.add('on');
+    statusTxt.textContent = '监听中';
+    statusTxt.classList.add('on');
+    srInfo.textContent = actx.sampleRate + ' Hz';
+    latInfo.textContent = Math.round((actx.baseLatency || 0) * 1000) + ' ms';
+    drawViz();
+    enumDevices();
+
+  } catch(err) {
+    console.error(err);
+    errMsg.textContent = err.message || '无法访问麦克风，请检查权限。';
+    errOvl.classList.add('show');
+    stop();
+  }
+}
+
+// ── Stop ──
+function stop() {
+  active = false;
+  if (animId) cancelAnimationFrame(animId);
+  [srcNode, nrNode, hpFilter, notchFilter, lpFilter, gainNode, analyser].forEach(n => { if(n) { n.disconnect(); } });
+  srcNode = nrNode = hpFilter = notchFilter = lpFilter = gainNode = analyser = null;
+  if (actx) { actx.close(); actx = null; }
+  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+  pwrBtn.classList.remove('on');
+  statusTxt.textContent = '点击开始';
+  statusTxt.classList.remove('on');
+  lvlFill.style.width = '0%';
+  lvlDb.textContent = '-∞ dB';
+  latInfo.textContent = '--';
+  srInfo.textContent = '--';
+  calStat.textContent = '点击校准以采集环境噪声';
+  calStat.className = 'cal-status';
+  calBtn.disabled = false;
+  calBtn.classList.remove('recording');
+  const w = canvas.width / devicePixelRatio, h = canvas.height / devicePixelRatio;
+  cCtx.clearRect(0, 0, w, h);
+}
+
+// ── NR params ──
+function sendNRParams() {
+  if (!nrNode) return;
+  const p = nrNode.port;
+  p.postMessage({ type: 'nrStrength', value: nrStr.value / 100 });
+  p.postMessage({ type: 'noiseFloor', value: Math.pow(10, -30/20) });
+  p.postMessage({ type: 'gateDb',     value: parseFloat(gateTh.value) });
+  p.postMessage({ type: 'setEnabled', value: nrToggle.checked });
+}
+
+// ── Calibration ──
+function startCalibration() {
+  if (!nrNode) return;
+  calBtn.disabled = true;
+  calBtn.classList.add('recording');
+  calStat.textContent = '正在采集环境噪声... 请保持安静';
+  calStat.className = 'cal-status rec';
+  nrNode.port.postMessage({ type: 'calibrate' });
+}
+
+// ── Events ──
+pwrBtn.addEventListener('click', () => active ? stop() : start());
+
+nrToggle.addEventListener('change', () => {
+  nrCtrl.classList.toggle('collapsed', !nrToggle.checked);
+  sendNRParams();
+});
+
+nrStr.addEventListener('input', () => {
+  nrStrVal.textContent = nrStr.value + '%';
+  if (nrNode) nrNode.port.postMessage({ type: 'nrStrength', value: nrStr.value / 100 });
+});
+
+gateTh.addEventListener('input', () => {
+  gateVal.textContent = gateTh.value + 'dB';
+  if (nrNode) nrNode.port.postMessage({ type: 'gateDb', value: parseFloat(gateTh.value) });
+});
+
+volSl.addEventListener('input', () => {
+  volVal.textContent = volSl.value + '%';
+  if (gainNode) gainNode.gain.value = volSl.value / 100;
+});
+
+monTog.addEventListener('change', () => {
+  if (!analyser || !actx) return;
+  try { monTog.checked ? analyser.connect(actx.destination) : analyser.disconnect(actx.destination); } catch(e) {}
+});
+
+inSel.addEventListener('change', () => { if (active) { stop(); start(); } });
+
+outSel.addEventListener('change', async () => {
+  if (actx && typeof actx.setSinkId === 'function') {
+    try { await actx.setSinkId(outSel.value); } catch(e) {}
+  }
+});
+
+calBtn.addEventListener('click', startCalibration);
+
+// Listen for calibration done
+function setupWorkletListener() {
+  if (!nrNode) return;
+  nrNode.port.onmessage = (e) => {
+    if (e.data.type === 'calDone') {
+      calBtn.disabled = false;
+      calBtn.classList.remove('recording');
+      calStat.textContent = '✓ 噪声采样完成，降噪已生效';
+      calStat.className = 'cal-status ok';
+    }
+  };
+}
+
+// Override start to also setup listener
+const _origStart = start;
+// Actually, let's patch it differently - intercept after node creation
+const origStartRef = start;
+
+// We need the worklet listener to be set. Let me modify the flow:
+// The nrNode.port.onmessage is set in start() implicitly. Let's restructure.
+
+// Actually, the issue is that in start() we create nrNode, then later we need to set onmessage.
+// The calibration message response needs to be caught. Let me just set it right after creation.
+
+// Let me rewrite start with the listener:
+// (already handled above in the start function - nrNode.port.onmessage is the default one
+//  from the processor. We need to override it on the main thread side.)
+
+// The AudioWorkletNode.port.onmessage on the main thread receives messages FROM the processor.
+// So we need to set nrNode.port.onmessage AFTER creating nrNode in start().
+
+// Let me fix this by adding it to the start function properly.
+// Since I can't easily modify the function above, let me wrap it:
+
+// ── Fix: ensure worklet messages are received ──
+const _start = start;
+// Can't reassign const... let me just patch the click handler:
+
+pwrBtn.removeEventListener('click', () => active ? stop() : start());
+
+pwrBtn.addEventListener('click', async () => {
+  if (active) { stop(); return; }
+  // Call start logic inline to set up listener
+  try {
+    const constraints = {
+      audio: {
+        deviceId: inSel.value && inSel.value !== 'default' ? { exact: inSel.value } : undefined,
+        echoCancellation: false, noiseSuppression: false, autoGainControl: false, latency: 0
+      }
+    };
+    stream = await navigator.mediaDevices.getUserMedia(constraints);
+    actx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
+    const blob = new Blob([WORKLET_CODE], { type: 'application/javascript' });
+    const wUrl = URL.createObjectURL(blob);
+    await actx.audioWorklet.addModule(wUrl);
+    URL.revokeObjectURL(wUrl);
+    srcNode = actx.createMediaStreamSource(stream);
+    nrNode = new AudioWorkletNode(actx, 'noise-reduce');
+
+    // ★ Set up message listener for calibration
+    nrNode.port.onmessage = (e) => {
+      if (e.data.type === 'calDone') {
+        calBtn.disabled = false;
+        calBtn.classList.remove('recording');
+        calStat.textContent = '✓ 噪声采样完成，降噪已生效';
+        calStat.className = 'cal-status ok';
+      }
+    };
+
+    hpFilter = actx.createBiquadFilter(); hpFilter.type = 'highpass'; hpFilter.frequency.value = 80; hpFilter.Q.value = 0.7;
+    notchFilter = actx.createBiquadFilter(); notchFilter.type = 'notch'; notchFilter.frequency.value = 50; notchFilter.Q.value = 4;
+    lpFilter = actx.createBiquadFilter(); lpFilter.type = 'lowpass'; lpFilter.frequency.value = 14000; lpFilter.Q.value = 0.5;
+    gainNode = actx.createGain(); gainNode.gain.value = volSl.value / 100;
+    analyser = actx.createAnalyser(); analyser.fftSize = 256; analyser.smoothingTimeConstant = 0.72;
+    freqData = new Uint8Array(analyser.frequencyBinCount);
+
+    srcNode.connect(nrNode);
+    nrNode.connect(hpFilter);
+    hpFilter.connect(notchFilter);
+    notchFilter.connect(lpFilter);
+    lpFilter.connect(gainNode);
+    gainNode.connect(analyser);
+    if (monTog.checked) analyser.connect(actx.destination);
+
+    if (typeof actx.setSinkId === 'function' && outSel.value) {
+      try { await actx.setSinkId(outSel.value); } catch(e) {}
+    }
+
+    sendNRParams();
+    active = true;
+    pwrBtn.classList.add('on');
+    statusTxt.textContent = '监听中';
+    statusTxt.classList.add('on');
+    srInfo.textContent = actx.sampleRate + ' Hz';
+    latInfo.textContent = Math.round((actx.baseLatency || 0) * 1000) + ' ms';
+    drawViz();
+    enumDevices();
+  } catch(err) {
+    console.error(err);
+    errMsg.textContent = err.message || '无法访问麦克风，请检查权限。';
+    errOvl.classList.add('show');
+    stop();
+  }
+});
+
+errClose.addEventListener('click', () => errOvl.classList.remove('show'));
+
+// Init
+navigator.mediaDevices.getUserMedia({ audio: true })
+  .then(s => { s.getTracks().forEach(t => t.stop()); enumDevices(); })
+  .catch(() => enumDevices());
+drawViz();
 </script>
 </body>
 </html>
