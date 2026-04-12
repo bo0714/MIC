@@ -329,7 +329,8 @@ async function startAudio() {
     };
 
     gainNode = actx.createGain();
-    gainNode.gain.value = volSl.value / 100;
+    const boost = 1.5; 
+    gainNode.gain.value = (volSl.value / 100) * boost;
     analyser = actx.createAnalyser();
     analyser.fftSize = 128; // 分析器也要减小以节省性能
     freqData = new Uint8Array(analyser.frequencyBinCount);
@@ -363,14 +364,39 @@ async function startAudio() {
 }
 
 function cleanup() {
+  isActive = false; // 先变更状态
   if (animId) cancelAnimationFrame(animId);
-  [srcNode, nrNode, gainNode, analyser].forEach(n => { if (n) n.disconnect(); });
-  if (actx) actx.close();
-  if (stream) stream.getTracks().forEach(t => t.stop());
-  isActive = false;
+  
+  // 1. 断开所有连接
+  [srcNode, nrNode, gainNode, analyser].forEach(n => { 
+    if (n) {
+      try { n.disconnect(); } catch(e) {}
+    }
+  });
+
+  // 2. 停止麦克风采集（关键：这才是真正关掉麦克风灯和声音的地方）
+  if (stream) {
+    stream.getTracks().forEach(t => {
+      t.stop();
+      console.log("Track stopped:", t.label);
+    });
+    stream = null;
+  }
+
+  // 3. 关闭音频上下文
+  if (actx) {
+    actx.close().then(() => {
+      actx = null;
+      console.log("AudioContext closed");
+    });
+  }
+
+  // 4. 重置 UI
   pwrBtn.classList.remove('on');
   statusTxt.textContent = '点击开始';
-  latInfo.textContent = '--'; srInfo.textContent = '--'; modeInfo.textContent = '--';
+  latInfo.textContent = '--'; 
+  srInfo.textContent = '--'; 
+  modeInfo.textContent = '--';
 }
 
 pwrBtn.addEventListener('click', () => isActive ? cleanup() : startAudio());
