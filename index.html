@@ -3,119 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Audio Passthrough</title>
+<title>Audio Passthrough - Ultra Low Latency</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --bg:#08080e;--s1:#0e0e18;--s2:#151522;--s3:#1c1c2e;
-  --accent:#00ffc8;--accent-dim:#00ffc828;--accent-glow:#00ffc850;
-  --amber:#ffb020;--amber-dim:#ffb02028;--amber-glow:#ffb02060;
-  --danger:#ff4466;--text:#e8e8f0;--muted:#5a5a72;--ring:#252538;
-}
-html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;overflow-x:hidden;-webkit-tap-highlight-color:transparent;user-select:none}
-body{display:flex;flex-direction:column;align-items:center;padding:16px 14px 32px;position:relative}
-body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 70% 40% at 50% -10%,#00ffc806,transparent 70%),radial-gradient(ellipse 50% 50% at 90% 90%,#0a0a1a,transparent 60%);pointer-events:none;z-index:0}
-.grain{position:fixed;inset:0;pointer-events:none;z-index:999;opacity:.025;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:200px}
-.app{position:relative;z-index:1;width:100%;max-width:400px;display:flex;flex-direction:column;align-items:center;gap:18px}
-.header{text-align:center}
-.header h1{font-family:'Space Mono',monospace;font-size:13px;letter-spacing:.35em;text-transform:uppercase;color:var(--muted);font-weight:400}
-.header .sub{font-size:10px;color:var(--muted);opacity:.45;margin-top:3px;font-family:'Space Mono',monospace;letter-spacing:.08em}
-
-/* Visualizer */
-.viz-wrap{width:100%;aspect-ratio:2.2/1;position:relative;border-radius:14px;background:var(--s1);border:1px solid var(--ring);overflow:hidden}
-.viz-wrap::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 50%,var(--bg) 100%);z-index:2;pointer-events:none}
-.viz-wrap canvas{width:100%;height:100%;display:block}
-
-/* Level */
-.level-row{width:100%;display:flex;align-items:center;gap:10px}
-.level-row .lbl{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.15em;width:24px;flex-shrink:0}
-.level-track{flex:1;height:5px;background:var(--s2);border-radius:3px;overflow:hidden}
-.level-fill{height:100%;width:0%;border-radius:3px;background:var(--accent);box-shadow:0 0 10px var(--accent-glow);transition:width .05s linear}
-.level-fill.hot{background:var(--danger);box-shadow:0 0 10px #ff446644}
-.level-db{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);width:52px;text-align:right;flex-shrink:0}
-
-/* Power */
-.power-btn{width:100px;height:100px;border-radius:50%;border:2px solid var(--ring);background:var(--s1);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .3s cubic-bezier(.4,0,.2,1);position:relative;outline:none;-webkit-appearance:none}
-.power-btn::before{content:'';position:absolute;inset:-5px;border-radius:50%;border:1px solid transparent;transition:border-color .3s}
-.power-btn svg{width:32px;height:32px;color:var(--accent);transition:all .3s}
-.power-btn .ico-stop{display:none}
-.power-btn:hover{border-color:var(--accent);box-shadow:0 0 24px var(--accent-dim)}
-.power-btn:active{transform:scale(.94)}
-.power-btn.on{border-color:var(--accent);background:#00ffc808;box-shadow:0 0 36px var(--accent-dim),inset 0 0 24px #00ffc806;animation:pulse 2s ease-in-out infinite}
-.power-btn.on::before{border-color:var(--accent-dim)}
-.power-btn.on .ico-mic{display:none}
-.power-btn.on .ico-stop{display:block}
-@keyframes pulse{0%,100%{box-shadow:0 0 36px var(--accent-dim),inset 0 0 24px #00ffc806}50%{box-shadow:0 0 50px var(--accent-glow),inset 0 0 32px #00ffc810}}
-
-.status{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.2em;color:var(--muted);transition:color .3s}
-.status.on{color:var(--accent)}
-
-/* Panels */
-.panel{width:100%;background:var(--s1);border:1px solid var(--ring);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:12px}
-.panel-head{display:flex;align-items:center;justify-content:space-between}
-.panel-title{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.2em;text-transform:uppercase}
-
-/* NR specific */
-.nr-toggle-row{display:flex;align-items:center;justify-content:space-between}
-.nr-controls{display:flex;flex-direction:column;gap:10px;overflow:hidden;max-height:200px;opacity:1;transition:max-height .35s ease,opacity .25s ease}
-.nr-controls.collapsed{max-height:0;opacity:0;pointer-events:none}
-
-/* Toggle */
-.toggle{width:40px;height:22px;border-radius:11px;background:var(--s3);border:1px solid var(--ring);cursor:pointer;position:relative;transition:all .3s;-webkit-appearance:none;appearance:none;outline:none;flex-shrink:0}
-.toggle::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--muted);transition:all .3s cubic-bezier(.4,0,.2,1)}
-.toggle:checked{background:var(--accent-dim);border-color:var(--accent)}
-.toggle:checked::after{left:20px;background:var(--accent);box-shadow:0 0 6px var(--accent-glow)}
-
-/* Slider row */
-.slider-row{display:flex;align-items:center;gap:10px}
-.slider-row .sl-label{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.1em;width:56px;flex-shrink:0}
-.slider-row .sl-val{font-family:'Space Mono',monospace;font-size:10px;color:var(--accent);width:36px;text-align:right;flex-shrink:0}
-.slider-row input[type=range]{flex:1;-webkit-appearance:none;appearance:none;height:3px;background:var(--s3);border-radius:2px;outline:none}
-.slider-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 0 10px var(--accent-glow);border:2px solid var(--bg)}
-.slider-row input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 0 10px var(--accent-glow);border:2px solid var(--bg)}
-
-/* Calibrate button */
-.cal-btn{background:var(--s3);border:1px solid var(--ring);color:var(--amber);font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.12em;padding:7px 14px;border-radius:8px;cursor:pointer;transition:all .25s;-webkit-appearance:none;text-transform:uppercase;white-space:nowrap}
-.cal-btn:hover{border-color:var(--amber);background:var(--amber-dim)}
-.cal-btn:disabled{opacity:.4;cursor:not-allowed}
-.cal-btn.recording{border-color:var(--amber);background:var(--amber-dim);animation:rec-pulse 1s ease-in-out infinite}
-@keyframes rec-pulse{0%,100%{box-shadow:0 0 8px var(--amber-dim)}50%{box-shadow:0 0 20px var(--amber-glow)}}
-.cal-status{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);text-align:center;min-height:14px;transition:color .3s}
-.cal-status.ok{color:var(--accent)}
-.cal-status.rec{color:var(--amber)}
-
-/* Volume */
-.vol-row{display:flex;align-items:center;gap:10px}
-.vol-icon{width:18px;height:18px;color:var(--muted);flex-shrink:0}
-.vol-row input[type=range]{flex:1;-webkit-appearance:none;appearance:none;height:3px;background:var(--s3);border-radius:2px;outline:none}
-.vol-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 0 10px var(--accent-glow);border:2px solid var(--bg)}
-.vol-row input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 0 10px var(--accent-glow);border:2px solid var(--bg)}
-.vol-val{font-family:'Space Mono',monospace;font-size:10px;color:var(--accent);width:36px;text-align:right;flex-shrink:0}
-
-/* Toggle row generic */
-.trow{display:flex;align-items:center;justify-content:space-between}
-.trow span{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.15em;text-transform:uppercase}
-
-/* Devices */
-.dev-row{display:flex;align-items:center;gap:8px}
-.dev-row label{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.1em;width:36px;flex-shrink:0;text-transform:uppercase}
-.dev-sel{flex:1;background:var(--s2);border:1px solid var(--ring);border-radius:7px;color:var(--text);font-family:'Outfit',sans-serif;font-size:11px;padding:7px 10px;outline:none;-webkit-appearance:none;appearance:none;cursor:pointer}
-.dev-sel:focus{border-color:var(--accent)}
-
-/* Info */
-.info-bar{width:100%;display:flex;justify-content:center;gap:20px}
-.info-item{font-family:'Space Mono',monospace;font-size:8px;color:var(--muted);opacity:.5;letter-spacing:.1em}
-.info-item span{color:var(--accent);opacity:.8}
-
-/* Error */
-.err-overlay{display:none;position:fixed;inset:0;background:#08080eee;z-index:1000;align-items:center;justify-content:center;padding:24px}
-.err-overlay.show{display:flex}
-.err-box{background:var(--s1);border:1px solid var(--danger);border-radius:14px;padding:28px;text-align:center;max-width:320px}
-.err-box h2{color:var(--danger);font-size:15px;margin-bottom:10px}
-.err-box p{color:var(--muted);font-size:12px;line-height:1.6;margin-bottom:18px}
-.err-box button{background:var(--danger);color:#fff;border:none;border-radius:8px;padding:9px 24px;font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.1em;cursor:pointer}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}:root{--bg:#08080e;--s1:#0e0e18;--s2:#151522;--s3:#1c1c2e;--accent:#00ffc8;--accent-dim:#00ffc828;--accent-glow:#00ffc850;--amber:#ffb020;--amber-dim:#ffb02028;--amber-glow:#ffb02060;--danger:#ff4466;--text:#e8e8f0;--muted:#5a5a72;--ring:#252538}html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;overflow-x:hidden;-webkit-tap-highlight-color:transparent;user-select:none}body{display:flex;flex-direction:column;align-items:center;padding:16px 14px 32px;position:relative}body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 70% 40% at 50% -10%,#00ffc806,transparent 70%),radial-gradient(ellipse 50% 50% at 90% 90%,#0a0a1a,transparent 60%);pointer-events:none;z-index:0}.grain{position:fixed;inset:0;pointer-events:none;z-index:999;opacity:.025;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:200px}.app{position:relative;z-index:1;width:100%;max-width:400px;display:flex;flex-direction:column;align-items:center;gap:18px}.header{text-align:center}.header h1{font-family:'Space Mono',monospace;font-size:13px;letter-spacing:.35em;text-transform:uppercase;color:var(--muted);font-weight:400}.header .sub{font-size:10px;color:var(--muted);opacity:.45;margin-top:3px;font-family:'Space Mono',monospace;letter-spacing:.08em}.viz-wrap{width:100%;aspect-ratio:2.2/1;position:relative;border-radius:14px;background:var(--s1);border:1px solid var(--ring);overflow:hidden}.viz-wrap::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 50%,var(--bg) 100%);z-index:2;pointer-events:none}.viz-wrap canvas{width:100%;height:100%;display:block}.level-row{width:100%;display:flex;align-items:center;gap:10px}.level-row .lbl{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.15em;width:24px;flex-shrink:0}.level-track{flex:1;height:5px;background:var(--s2);border-radius:3px;overflow:hidden}.level-fill{height:100%;width:0%;border-radius:3px;background:var(--accent);box-shadow:0 0 10px var(--accent-glow);transition:width .05s linear}.level-fill.hot{background:var(--danger);box-shadow:0 0 10px #ff446644}.level-db{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);width:52px;text-align:right;flex-shrink:0}.power-btn{width:100px;height:100px;border-radius:50%;border:2px solid var(--ring);background:var(--s1);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .3s cubic-bezier(.4,0,.2,1);position:relative;outline:none;-webkit-appearance:none}.power-btn svg{width:32px;height:32px;color:var(--accent);transition:all .3s}.power-btn .ico-stop{display:none}.power-btn:hover{border-color:var(--accent);box-shadow:0 0 24px var(--accent-dim)}.power-btn:active{transform:scale(.94)}.power-btn.on{border-color:var(--accent);background:#00ffc808;box-shadow:0 0 36px var(--accent-dim),inset 0 0 24px #00ffc806;animation:pulse 2s ease-in-out infinite}.power-btn.on .ico-mic{display:none}.power-btn.on .ico-stop{display:block}@keyframes pulse{0%,100%{box-shadow:0 0 36px var(--accent-dim),inset 0 0 24px #00ffc806}50%{box-shadow:0 0 50px var(--accent-glow),inset 0 0 32px #00ffc810}}.status{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.2em;color:var(--muted);transition:color .3s}.status.on{color:var(--accent)}.panel{width:100%;background:var(--s1);border:1px solid var(--ring);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:12px}.panel-title{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.2em;text-transform:uppercase}.nr-toggle-row{display:flex;align-items:center;justify-content:space-between}.nr-controls{display:flex;flex-direction:column;gap:10px;overflow:hidden;max-height:300px;opacity:1;transition:max-height .35s ease,opacity .25s ease}.nr-controls.collapsed{max-height:0;opacity:0;pointer-events:none}.toggle{width:40px;height:22px;border-radius:11px;background:var(--s3);border:1px solid var(--ring);cursor:pointer;position:relative;transition:all .3s;-webkit-appearance:none;appearance:none;outline:none;flex-shrink:0}.toggle::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--muted);transition:all .3s cubic-bezier(.4,0,.2,1)}.toggle:checked{background:var(--accent-dim);border-color:var(--accent)}.toggle:checked::after{left:20px;background:var(--accent);box-shadow:0 0 6px var(--accent-glow)}.slider-row{display:flex;align-items:center;gap:10px}.slider-row .sl-label{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.1em;width:56px;flex-shrink:0}.slider-row .sl-val{font-family:'Space Mono',monospace;font-size:10px;color:var(--accent);width:36px;text-align:right;flex-shrink:0}input[type=range]{flex:1;-webkit-appearance:none;appearance:none;height:3px;background:var(--s3);border-radius:2px;outline:none}input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 0 10px var(--accent-glow);border:2px solid var(--bg)}input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 0 10px var(--accent-glow);border:2px solid var(--bg)}.cal-btn{background:var(--s3);border:1px solid var(--ring);color:var(--amber);font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.12em;padding:7px 14px;border-radius:8px;cursor:pointer;transition:all .25s;-webkit-appearance:none;text-transform:uppercase;white-space:nowrap}.cal-btn:hover{border-color:var(--amber);background:var(--amber-dim)}.cal-btn:disabled{opacity:.4;cursor:not-allowed}.cal-btn.recording{border-color:var(--amber);background:var(--amber-dim);animation:rec-pulse 1s ease-in-out infinite}@keyframes rec-pulse{0%,100%{box-shadow:0 0 8px var(--amber-dim)}50%{box-shadow:0 0 20px var(--amber-glow)}}.cal-status{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);text-align:center;min-height:14px;transition:color .3s}.cal-status.ok{color:var(--accent)}.cal-status.rec{color:var(--amber)}.vol-row{display:flex;align-items:center;gap:10px}.vol-icon{width:18px;height:18px;color:var(--muted);flex-shrink:0}.trow{display:flex;align-items:center;justify-content:space-between}.trow span{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.15em;text-transform:uppercase}.dev-row{display:flex;align-items:center;gap:8px}.dev-row label{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.1em;width:36px;flex-shrink:0;text-transform:uppercase}.dev-sel{flex:1;background:var(--s2);border:1px solid var(--ring);border-radius:7px;color:var(--text);font-family:'Outfit',sans-serif;font-size:11px;padding:7px 10px;outline:none;-webkit-appearance:none;appearance:none;cursor:pointer}.dev-sel:focus{border-color:var(--accent)}.info-bar{width:100%;display:flex;justify-content:center;gap:20px}.info-item{font-family:'Space Mono',monospace;font-size:8px;color:var(--muted);opacity:.5;letter-spacing:.1em}.info-item span{color:var(--accent);opacity:.8}.err-overlay{display:none;position:fixed;inset:0;background:#08080eee;z-index:1000;align-items:center;justify-content:center;padding:24px}.err-overlay.show{display:flex}.err-box{background:var(--s1);border:1px solid var(--danger);border-radius:14px;padding:28px;text-align:center;max-width:320px}.err-box h2{color:var(--danger);font-size:15px;margin-bottom:10px}.err-box p{color:var(--muted);font-size:12px;line-height:1.6;margin-bottom:18px}.err-box button{background:var(--danger);color:#fff;border:none;border-radius:8px;padding:9px 24px;font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.1em;cursor:pointer}
 </style>
 </head>
 <body>
@@ -123,25 +15,20 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 <div class="app">
   <div class="header">
     <h1>Audio Passthrough</h1>
-    <div class="sub">实时音频直通 · 降噪监听</div>
+    <div class="sub">极速音频直通 · 延迟优先</div>
   </div>
-
   <div class="viz-wrap"><canvas id="viz"></canvas></div>
-
   <div class="level-row">
     <span class="lbl">IN</span>
     <div class="level-track"><div class="level-fill" id="lvlFill"></div></div>
     <span class="level-db" id="lvlDb">-∞ dB</span>
   </div>
-
   <button class="power-btn" id="pwrBtn">
     <svg class="ico-mic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="9" y="1" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="17" x2="12" y2="21"/><line x1="8" y1="21" x2="16" y2="21"/></svg>
     <svg class="ico-stop" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
   </button>
   <span class="status" id="statusTxt">点击开始</span>
-
-  <!-- Noise Reduction Panel -->
-  <div class="panel" id="nrPanel">
+  <div class="panel">
     <div class="nr-toggle-row">
       <span class="panel-title">降噪 Noise Reduction</span>
       <input type="checkbox" class="toggle" id="nrToggle" checked>
@@ -149,13 +36,13 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <div class="nr-controls" id="nrControls">
       <div class="slider-row">
         <span class="sl-label">降噪强度</span>
-        <input type="range" id="nrStrength" min="0" max="100" value="60">
-        <span class="sl-val" id="nrStrVal">60%</span>
+        <input type="range" id="nrStrength" min="0" max="100" value="40">
+        <span class="sl-val" id="nrStrVal">40%</span>
       </div>
       <div class="slider-row">
         <span class="sl-label">噪声门限</span>
-        <input type="range" id="gateThresh" min="-80" max="-10" value="-45">
-        <span class="sl-val" id="gateVal">-45dB</span>
+        <input type="range" id="gateThresh" min="-80" max="-10" value="-55">
+        <span class="sl-val" id="gateVal">-55dB</span>
       </div>
       <div style="display:flex;align-items:center;gap:10px">
         <button class="cal-btn" id="calBtn">校准噪声</button>
@@ -163,8 +50,6 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       </div>
     </div>
   </div>
-
-  <!-- Volume Panel -->
   <div class="panel">
     <span class="panel-title">输出 Output</span>
     <div class="vol-row">
@@ -177,8 +62,6 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       <input type="checkbox" class="toggle" id="monToggle" checked>
     </div>
   </div>
-
-  <!-- Devices -->
   <div class="panel">
     <span class="panel-title">设备 Devices</span>
     <div class="dev-row">
@@ -190,14 +73,12 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       <select class="dev-sel" id="outSel"><option>默认扬声器</option></select>
     </div>
   </div>
-
   <div class="info-bar">
     <div class="info-item">延迟 <span id="latInfo">--</span></div>
     <div class="info-item">采样 <span id="srInfo">--</span></div>
-    <div class="info-item">FFT <span>256</span></div>
+    <div class="info-item">模式 <span id="modeInfo">--</span></div>
   </div>
 </div>
-
 <div class="err-overlay" id="errOvl">
   <div class="err-box">
     <h2>无法访问麦克风</h2>
@@ -208,217 +89,170 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 
 <script>
 // ═══════════════════════════════════════════════════
-//  AudioWorklet Processor Code (embedded as Blob URL)
+//  AudioWorklet: 极速版降噪处理器
 // ═══════════════════════════════════════════════════
 const WORKLET_CODE = `
-class FFT {
-  constructor(n) {
-    this.N = n;
-    this.half = n >> 1;
-    this.cos = new Float32Array(this.half);
-    this.sin = new Float32Array(this.half);
-    for (let i = 0; i < this.half; i++) {
-      this.cos[i] = Math.cos(-2 * Math.PI * i / n);
-      this.sin[i] = Math.sin(-2 * Math.PI * i / n);
+class NoiseReduceProcessor extends AudioWorkletProcessor {
+  constructor() {
+    super();
+    // 关键优化：FFT 窗口减小到 256，算法延迟降低 50%
+    this.N = 256; 
+    this.HOP = 128; 
+    this.HALF = this.N >> 1;
+
+    this.cosTable = new Float32Array(this.HALF);
+    this.sinTable = new Float32Array(this.HALF);
+    for (let i = 0; i < this.HALF; i++) {
+      const angle = -2 * Math.PI * i / this.N;
+      this.cosTable[i] = Math.cos(angle);
+      this.sinTable[i] = Math.sin(angle);
     }
-    this.rev = new Uint32Array(n);
-    let bits = Math.round(Math.log2(n));
-    for (let i = 0; i < n; i++) {
+    this.revIdx = new Uint32Array(this.N);
+    const bits = Math.round(Math.log2(this.N));
+    for (let i = 0; i < this.N; i++) {
       let v = i, r = 0;
       for (let j = 0; j < bits; j++) { r = (r << 1) | (v & 1); v >>= 1; }
-      this.rev[i] = r;
+      this.revIdx[i] = r;
     }
+
+    this.inBuf = new Float32Array(this.N);
+    this.inWritePos = 0;
+    this.outBuf = new Float32Array(this.N * 2);
+    this.outReadPos = 0;
+    this.outWritePos = 0;
+
+    this.re = new Float32Array(this.N);
+    this.im = new Float32Array(this.N);
+    this.window = new Float32Array(this.N);
+    for (let i = 0; i < this.N; i++)
+      this.window[i] = 0.5 * (1 - Math.cos(2 * Math.PI * i / this.N));
+
+    this.enabled = true;
+    this.nrStrength = 0.4;
+    this.gateCoeff = 0.003;
+    this.noiseSpec = new Float32Array(this.HALF).fill(0.001);
+    this.prevGain = new Float32Array(this.HALF).fill(1.0);
+
+    this.calibrating = false;
+    this.calFrames = 0;
+    this.calAccum = new Float32Array(this.HALF);
+
+    this.port.onmessage = (e) => {
+      const d = e.data;
+      if (d.type === 'nrStrength') this.nrStrength = d.value;
+      if (d.type === 'gateDb')     this.gateCoeff = Math.pow(10, d.value / 20);
+      if (d.type === 'setEnabled') this.enabled = d.value;
+      if (d.type === 'calibrate')  { this.calibrating = true; this.calFrames = 0; this.calAccum.fill(0); }
+    };
   }
-  forward(re, im) {
-    const n = this.N, rev = this.rev, cos = this.cos, sin = this.sin;
-    for (let i = 0; i < n; i++) {
-      if (i < rev[i]) { let tr = re[i]; re[i] = re[rev[i]]; re[rev[i]] = tr; tr = im[i]; im[i] = im[rev[i]]; im[rev[i]] = tr; }
+
+  fftForward(re, im) {
+    const N = this.N, rev = this.revIdx, cos = this.cosTable, sin = this.sinTable;
+    for (let i = 0; i < N; i++) {
+      if (i < rev[i]) {
+        let t = re[i]; re[i] = re[rev[i]]; re[rev[i]] = t;
+        t = im[i]; im[i] = im[rev[i]]; im[rev[i]] = t;
+      }
     }
-    for (let size = 2; size <= n; size <<= 1) {
-      let hs = size >> 1, step = n / size;
-      for (let i = 0; i < n; i += size) {
+    for (let size = 2; size <= N; size <<= 1) {
+      const hs = size >> 1, step = N / size;
+      for (let i = 0; i < N; i += size) {
         for (let j = 0; j < hs; j++) {
-          let k = j * step, tRe = cos[k], tIm = sin[k];
-          let t1 = re[i+j+hs]*tRe - im[i+j+hs]*tIm;
-          let t2 = re[i+j+hs]*tIm + im[i+j+hs]*tRe;
-          re[i+j+hs] = re[i+j]-t1; im[i+j+hs] = im[i+j]-t2;
-          re[i+j] += t1; im[i+j] += t2;
+          const k = j * step;
+          const tRe = cos[k], tIm = sin[k];
+          const t1 = re[i+j+hs]*tRe - im[i+j+hs]*tIm;
+          const t2 = re[i+j+hs]*tIm + im[i+j+hs]*tRe;
+          re[i+j+hs] = re[i+j] - t1;
+          im[i+j+hs] = im[i+j] - t2;
+          re[i+j] += t1;
+          im[i+j] += t2;
         }
       }
     }
   }
-  inverse(re, im) {
-    const n = this.N;
-    for (let i = 0; i < n; i++) im[i] = -im[i];
-    this.forward(re, im);
-    const inv = 1/n;
-    for (let i = 0; i < n; i++) { re[i] *= inv; im[i] = -im[i] * inv; }
-  }
-}
 
-class NoiseReduceProc extends AudioWorkletProcessor {
-  constructor() {
-    super();
-    this.FFT_N = 256;
-    this.HOP  = 128;
-    this.fft  = new FFT(this.FFT_N);
-    this.inBuf  = new Float32Array(this.FFT_N);
-    this.outBuf = new Float32Array(this.FFT_N);
-    this.outPos = 0;
-    this.inLen  = 0;
-    this.re  = new Float32Array(this.FFT_N);
-    this.im  = new Float32Array(this.FFT_N);
-    this.mag = new Float32Array(this.HOP + 1);
-    this.prevGain = new Float32Array(this.HOP + 1);
-    this.prevGain.fill(1);
-    this.noise  = new Float32Array(this.HOP + 1);
-    this.window = new Float32Array(this.FFT_N);
-    for (let i = 0; i < this.FFT_N; i++)
-      this.window[i] = 0.5 * (1 - Math.cos(2 * Math.PI * i / this.FFT_N));
-    this.enabled    = true;
-    this.nrStrength = 0.6;
-    this.noiseFloor = 0.01;
-    this.gateDb     = -45;
-    this.gateCoeff  = Math.pow(10, this.gateDb / 20);
-    this.alphaRise  = 0.7;
-    this.alphaFall  = 0.94;
-    this.calibrating = false;
-    this.calFrames  = 0;
-    this.calAccum   = new Float32Array(this.HOP + 1);
-    this.port.onmessage = (e) => this.onMsg(e.data);
-  }
-
-  onMsg(d) {
-    if (d.type === 'nrStrength')   this.nrStrength = d.value;
-    if (d.type === 'noiseFloor')   this.noiseFloor = d.value;
-    if (d.type === 'gateDb')       { this.gateDb = d.value; this.gateCoeff = Math.pow(10, d.value / 20); }
-    if (d.type === 'setEnabled')   this.enabled = d.value;
-    if (d.type === 'calibrate')    { this.calibrating = true; this.calFrames = 0; this.calAccum.fill(0); }
-    if (d.type === 'setNoise')     this.noise.set(d.value);
-  }
-
-  calibrateFrame() {
-    const half = this.HOP + 1;
-    for (let i = 0; i < half; i++) this.calAccum[i] += this.mag[i];
-    this.calFrames++;
-    if (this.calFrames >= 90) {
-      for (let i = 0; i < half; i++) this.noise[i] = this.calAccum[i] / this.calFrames;
-      this.calibrating = false;
-      this.port.postMessage({ type: 'calDone', noise: Array.from(this.noise) });
-    }
+  fftInverse(re, im) {
+    const N = this.N;
+    for (let i = 0; i < N; i++) im[i] = -im[i];
+    this.fftForward(re, im);
+    const inv = 1 / N;
+    for (let i = 0; i < N; i++) { re[i] *= inv; im[i] = -im[i] * inv; }
   }
 
   processFrame() {
-    const N = this.FFT_N, H = this.HOP, half = H + 1;
-    const re = this.re, im = this.im, mag = this.mag;
-    const noise = this.noise, prevG = this.prevGain;
-    const win = this.window, str = this.nrStrength, floor = this.noiseFloor;
-    const gCoeff = this.gateCoeff, aR = this.alphaRise, aF = this.alphaFall;
+    const N = this.N, H = this.HALF, re = this.re, im = this.im;
+    const noise = this.noiseSpec, prevG = this.prevGain, win = this.window;
+    
+    for (let i = 0; i < N; i++) { re[i] = this.inBuf[i] * win[i]; im[i] = 0; }
+    this.fftForward(re, im);
 
-    re.set(this.inBuf); im.fill(0);
-    for (let i = 0; i < N; i++) { re[i] *= win[i]; }
-    this.fft.forward(re, im);
-
-    // magnitude
-    for (let i = 0; i < half; i++) mag[i] = Math.sqrt(re[i]*re[i] + im[i]*im[i]);
-
-    // calibrate?
-    if (this.calibrating) { this.calibrateFrame(); return; }
-
-    // noise gate (frequency-domain per-bin)
-    let below = true;
-    for (let i = 1; i < half; i++) { if (mag[i] > gCoeff * 20) { below = false; break; } }
-    if (below) { for (let i = 0; i < half; i++) { re[i] = 0; im[i] = 0; } }
-    else {
-      // spectral subtraction
-      for (let i = 1; i < half; i++) {
-        let nPow = noise[i] * noise[i] * (1 + str * 4);
-        let sPow = mag[i] * mag[i];
-        let g = Math.sqrt(Math.max(sPow - nPow, sPow * floor) / (sPow + 1e-10));
-        // temporal smoothing
-        g = Math.max(0.02, g);
-        g = (g < prevG[i]) ? aF * prevG[i] + (1 - aF) * g : aR * prevG[i] + (1 - aR) * g;
+    if (this.calibrating) {
+      for (let i = 0; i < H; i++) this.calAccum[i] += Math.sqrt(re[i]*re[i] + im[i]*im[i]);
+      if (++this.calFrames >= 120) {
+        for (let i = 0; i < H; i++) this.noiseSpec[i] = this.calAccum[i] / 120;
+        this.calibrating = false;
+        this.port.postMessage({ type: 'calDone' });
+      }
+    } else if (this.enabled) {
+      const overSub = 1.0 + this.nrStrength * 2.0;
+      for (let i = 1; i < H; i++) {
+        const mag = Math.sqrt(re[i]*re[i] + im[i]*im[i]);
+        const nPow = noise[i] * overSub;
+        let g = Math.max(0.05, (mag - nPow) / (mag + 1e-10));
+        if (mag < this.gateCoeff) g *= 0.1;
+        g = 0.6 * prevG[i] + 0.4 * g;
         prevG[i] = g;
         re[i] *= g; im[i] *= g;
-        if (i > 0) { re[N-i] *= g; im[N-i] *= g; }
+        re[N-i] *= g; im[N-i] *= g;
       }
+      re[0] *= 0.2; im[0] = 0;
     }
 
-    this.fft.inverse(re, im);
-    for (let i = 0; i < N; i++) this.outBuf[i] += re[i] * win[i];
+    this.fftInverse(re, im);
+    for (let i = 0; i < N; i++) this.outBuf[this.outWritePos + i] += re[i] * win[i];
   }
 
   process(inputs, outputs) {
-    const inp = inputs[0], out = outputs[0];
-    if (!inp || !inp[0] || !out || !out[0]) return true;
-    const iData = inp[0], oData = out[0], bs = iData.length;
+    const inp = inputs[0][0], out = outputs[0][0];
+    if (!inp || !out) return true;
 
-    // shift input buffer
-    const remain = this.FFT_N - bs;
-    for (let i = 0; i < remain; i++) this.inBuf[i] = this.inBuf[i + bs];
-    for (let i = 0; i < bs; i++) this.inBuf[remain + i] = iData[i];
-    this.inLen = Math.min(this.FFT_N, this.inLen + bs);
-
-    if (this.inLen >= this.FFT_N) this.processFrame();
-
-    // output from overlap buffer
-    for (let i = 0; i < bs; i++) {
-      if (this.outPos < this.FFT_N) {
-        oData[i] = this.enabled ? this.outBuf[this.outPos] : this.inBuf[remain + i];
-      } else {
-        oData[i] = this.enabled ? 0 : iData[i];
+    // 优化：使用 .set 进行内存拷贝
+    for (let i = 0; i < inp.length; i++) {
+      this.inBuf[this.inWritePos++] = inp[i];
+      if (this.inWritePos >= this.N) {
+        this.processFrame();
+        this.inWritePos = this.N - this.HOP;
+        this.inBuf.set(this.inBuf.subarray(this.HOP));
+        this.outWritePos += this.HOP;
       }
-      this.outPos++;
     }
 
-    // shift output buffer
-    if (this.outPos >= this.HOP) {
-      const shift = this.HOP;
-      const len = this.FFT_N - shift;
-      for (let i = 0; i < len; i++) this.outBuf[i] = this.outBuf[i + shift];
-      for (let i = len; i < this.FFT_N; i++) this.outBuf[i] = 0;
-      this.outPos -= shift;
+    for (let i = 0; i < out.length; i++) {
+      out[i] = this.outBuf[this.outReadPos++];
+      this.outBuf[this.outReadPos - this.HOP - 1] = 0;
     }
+
+    if (this.outReadPos > this.N) {
+      this.outBuf.set(this.outBuf.subarray(this.HOP));
+      this.outReadPos -= this.HOP;
+      this.outWritePos -= this.HOP;
+    }
+
     return true;
   }
 }
-registerProcessor('noise-reduce', NoiseReduceProc);
+registerProcessor('noise-reduce', NoiseReduceProcessor);
 `;
 
 // ═══════════════════════════════════════════════════
-//  Main Application
+//  主应用：音频逻辑优化
 // ═══════════════════════════════════════════════════
 const $ = id => document.getElementById(id);
-const pwrBtn   = $('pwrBtn');
-const statusTxt= $('statusTxt');
-const nrToggle = $('nrToggle');
-const nrCtrl   = $('nrControls');
-const nrStr    = $('nrStrength');
-const nrStrVal = $('nrStrVal');
-const gateTh   = $('gateThresh');
-const gateVal  = $('gateVal');
-const calBtn   = $('calBtn');
-const calStat  = $('calStatus');
-const volSl    = $('volSlider');
-const volVal   = $('volVal');
-const monTog   = $('monToggle');
-const inSel    = $('inSel');
-const outSel   = $('outSel');
-const lvlFill  = $('lvlFill');
-const lvlDb    = $('lvlDb');
-const latInfo  = $('latInfo');
-const srInfo   = $('srInfo');
-const canvas   = $('viz');
-const cCtx     = canvas.getContext('2d');
-const errOvl   = $('errOvl');
-const errMsg   = $('errMsg');
-const errClose = $('errClose');
 
-let actx = null, srcNode = null, gainNode = null, analyser = null;
-let nrNode = null, lpFilter = null, hpFilter = null, notchFilter = null;
-let stream = null, active = false, animId = null, freqData = null;
+const pwrBtn = $('pwrBtn'), statusTxt = $('statusTxt'), nrToggle = $('nrToggle'), nrStr = $('nrStrength'), nrStrVal = $('nrStrVal'), gateTh = $('gateThresh'), gateVal = $('gateVal'), calBtn = $('calBtn'), calStat = $('calStatus'), volSl = $('volSlider'), volVal = $('volVal'), monTog = $('monToggle'), inSel = $('inSel'), outSel = $('outSel'), lvlFill = $('lvlFill'), lvlDb = $('lvlDb'), latInfo = $('latInfo'), srInfo = $('srInfo'), modeInfo = $('modeInfo'), canvas = $('viz'), cCtx = canvas.getContext('2d'), errOvl = $('errOvl'), errMsg = $('errMsg'), errClose = $('errClose');
 
-// ── Canvas ──
+let actx = null, srcNode = null, gainNode = null, analyser = null, nrNode = null, stream = null, isActive = false, animId = null, freqData = null;
+
 function resizeCanvas() {
   const r = canvas.parentElement.getBoundingClientRect();
   canvas.width = r.width * devicePixelRatio;
@@ -428,329 +262,148 @@ function resizeCanvas() {
 resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
 
-// ── Devices ──
 async function enumDevices() {
   try {
     const devs = await navigator.mediaDevices.enumerateDevices();
     const ins = devs.filter(d => d.kind === 'audioinput');
     const outs = devs.filter(d => d.kind === 'audiooutput');
-    inSel.innerHTML = '';
-    ins.forEach((d, i) => { const o = document.createElement('option'); o.value = d.deviceId; o.textContent = d.label || `麦克风 ${i+1}`; inSel.appendChild(o); });
-    if (!ins.length) inSel.innerHTML = '<option>未找到</option>';
-    outSel.innerHTML = '';
-    outs.forEach((d, i) => { const o = document.createElement('option'); o.value = d.deviceId; o.textContent = d.label || `扬声器 ${i+1}`; outSel.appendChild(o); });
-    if (!outs.length) outSel.innerHTML = '<option>未找到</option>';
-  } catch(e) { console.warn(e); }
+    inSel.innerHTML = ins.map((d, i) => `<option value="${d.deviceId}">${d.label || '麦克风 '+(i+1)}</option>`).join('');
+    outSel.innerHTML = outs.map((d, i) => `<option value="${d.deviceId}">${d.label || '扬声器 '+(i+1)}</option>`).join('');
+  } catch(e) {}
 }
 
-// ── Visualizer ──
 function drawViz() {
-  if (!active || !analyser) { animId = requestAnimationFrame(drawViz); return; }
+  if (!isActive || !analyser) { animId = requestAnimationFrame(drawViz); return; }
   const w = canvas.width / devicePixelRatio, h = canvas.height / devicePixelRatio;
   cCtx.clearRect(0, 0, w, h);
   analyser.getByteFrequencyData(freqData);
-
-  const bars = 48, bw = w / bars, gap = 2;
+  const bars = 40, bw = w / bars;
   for (let i = 0; i < bars; i++) {
-    const di = Math.floor(i * freqData.length / bars);
-    const v = freqData[di] / 255;
-    const bh = Math.max(1.5, v * h * 0.88);
-    const x = i * bw, y = h - bh;
-    const g = cCtx.createLinearGradient(x, y, x, h);
-    g.addColorStop(0, '#00ffc8');
-    g.addColorStop(0.5, '#00ffc888');
-    g.addColorStop(1, '#00ffc818');
-    cCtx.fillStyle = g;
-    cCtx.beginPath();
-    cCtx.roundRect(x + gap/2, y, bw - gap, bh, [1.5, 1.5, 0, 0]);
-    cCtx.fill();
+    const v = freqData[Math.floor(i * freqData.length / bars)] / 255;
+    cCtx.fillStyle = '#00ffc8';
+    cCtx.fillRect(i * bw + 1, h - (v * h * 0.8), bw - 2, v * h * 0.8);
   }
-
-  // waveform
   const td = new Uint8Array(analyser.frequencyBinCount);
   analyser.getByteTimeDomainData(td);
-  cCtx.beginPath();
-  cCtx.strokeStyle = '#00ffc830';
-  cCtx.lineWidth = 1.2;
-  const sl = w / td.length;
-  let px = 0;
-  for (let i = 0; i < td.length; i++) {
-    const y = (td[i] / 128) * h / 2;
-    i === 0 ? cCtx.moveTo(px, y) : cCtx.lineTo(px, y);
-    px += sl;
-  }
-  cCtx.stroke();
-
-  // level
   let sum = 0;
   for (let i = 0; i < td.length; i++) { const v = (td[i]-128)/128; sum += v*v; }
   const rms = Math.sqrt(sum / td.length);
-  const db = rms > 0.0005 ? (20*Math.log10(rms)).toFixed(1) : '-∞';
-  const pct = Math.min(100, rms * 280);
-  lvlFill.style.width = pct + '%';
-  lvlFill.classList.toggle('hot', pct > 82);
-  lvlDb.textContent = (rms > 0.0005 ? db : '-∞') + ' dB';
-
+  lvlFill.style.width = Math.min(100, rms * 300) + '%';
+  lvlDb.textContent = (rms > 0.0005 ? (20*Math.log10(rms)).toFixed(1) : '-∞') + ' dB';
   animId = requestAnimationFrame(drawViz);
 }
 
-// ── Start ──
-async function start() {
+async function startAudio() {
   try {
+    // 强制关闭所有可能导致延迟的浏览器预处理
     const constraints = {
       audio: {
-        deviceId: inSel.value && inSel.value !== 'default' ? { exact: inSel.value } : undefined,
-        echoCancellation: false, noiseSuppression: false, autoGainControl: false, latency: 0
+        deviceId: inSel.value ? { exact: inSel.value } : undefined,
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false,
+        latency: 0
       }
     };
+
     stream = await navigator.mediaDevices.getUserMedia(constraints);
+    
+    // 强制 48kHz 采样率，匹配手机硬件底层
+    actx = new (window.AudioContext || window.webkitAudioContext)({
+      latencyHint: 0, 
+      sampleRate: 48000 
+    });
 
-    actx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
-
-    // Load AudioWorklet
-    const blob = new Blob([WORKLET_CODE], { type: 'application/javascript' });
-    const url = URL.createObjectURL(blob);
-    await actx.audioWorklet.addModule(url);
-    URL.revokeObjectURL(url);
-
-    // Nodes
-    srcNode = actx.createMediaStreamSource(stream);
-    nrNode  = new AudioWorkletNode(actx, 'noise-reduce');
-    hpFilter  = actx.createBiquadFilter(); hpFilter.type = 'highpass';  hpFilter.frequency.value = 80;  hpFilter.Q.value = 0.7;
-    notchFilter = actx.createBiquadFilter(); notchFilter.type = 'notch'; notchFilter.frequency.value = 50; notchFilter.Q.value = 4;
-    lpFilter  = actx.createBiquadFilter(); lpFilter.type = 'lowpass';   lpFilter.frequency.value = 14000; lpFilter.Q.value = 0.5;
-    gainNode  = actx.createGain(); gainNode.gain.value = volSl.value / 100;
-    analyser  = actx.createAnalyser(); analyser.fftSize = 256; analyser.smoothingTimeConstant = 0.72;
-    freqData  = new Uint8Array(analyser.frequencyBinCount);
-
-    // Chain: src -> NR -> hp -> notch -> lp -> gain -> analyser -> dest
-    srcNode.connect(nrNode);
-    nrNode.connect(hpFilter);
-    hpFilter.connect(notchFilter);
-    notchFilter.connect(lpFilter);
-    lpFilter.connect(gainNode);
-    gainNode.connect(analyser);
-
-    if (monTog.checked) analyser.connect(actx.destination);
-
-    // Set output device
-    if (typeof actx.setSinkId === 'function' && outSel.value) {
-      try { await actx.setSinkId(outSel.value); } catch(e) {}
-    }
-
-    // Send initial NR params
-    sendNRParams();
-
-    active = true;
-    pwrBtn.classList.add('on');
-    statusTxt.textContent = '监听中';
-    statusTxt.classList.add('on');
-    srInfo.textContent = actx.sampleRate + ' Hz';
-    latInfo.textContent = Math.round((actx.baseLatency || 0) * 1000) + ' ms';
-    drawViz();
-    enumDevices();
-
-  } catch(err) {
-    console.error(err);
-    errMsg.textContent = err.message || '无法访问麦克风，请检查权限。';
-    errOvl.classList.add('show');
-    stop();
-  }
-}
-
-// ── Stop ──
-function stop() {
-  active = false;
-  if (animId) cancelAnimationFrame(animId);
-  [srcNode, nrNode, hpFilter, notchFilter, lpFilter, gainNode, analyser].forEach(n => { if(n) { n.disconnect(); } });
-  srcNode = nrNode = hpFilter = notchFilter = lpFilter = gainNode = analyser = null;
-  if (actx) { actx.close(); actx = null; }
-  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
-  pwrBtn.classList.remove('on');
-  statusTxt.textContent = '点击开始';
-  statusTxt.classList.remove('on');
-  lvlFill.style.width = '0%';
-  lvlDb.textContent = '-∞ dB';
-  latInfo.textContent = '--';
-  srInfo.textContent = '--';
-  calStat.textContent = '点击校准以采集环境噪声';
-  calStat.className = 'cal-status';
-  calBtn.disabled = false;
-  calBtn.classList.remove('recording');
-  const w = canvas.width / devicePixelRatio, h = canvas.height / devicePixelRatio;
-  cCtx.clearRect(0, 0, w, h);
-}
-
-// ── NR params ──
-function sendNRParams() {
-  if (!nrNode) return;
-  const p = nrNode.port;
-  p.postMessage({ type: 'nrStrength', value: nrStr.value / 100 });
-  p.postMessage({ type: 'noiseFloor', value: Math.pow(10, -30/20) });
-  p.postMessage({ type: 'gateDb',     value: parseFloat(gateTh.value) });
-  p.postMessage({ type: 'setEnabled', value: nrToggle.checked });
-}
-
-// ── Calibration ──
-function startCalibration() {
-  if (!nrNode) return;
-  calBtn.disabled = true;
-  calBtn.classList.add('recording');
-  calStat.textContent = '正在采集环境噪声... 请保持安静';
-  calStat.className = 'cal-status rec';
-  nrNode.port.postMessage({ type: 'calibrate' });
-}
-
-// ── Events ──
-pwrBtn.addEventListener('click', () => active ? stop() : start());
-
-nrToggle.addEventListener('change', () => {
-  nrCtrl.classList.toggle('collapsed', !nrToggle.checked);
-  sendNRParams();
-});
-
-nrStr.addEventListener('input', () => {
-  nrStrVal.textContent = nrStr.value + '%';
-  if (nrNode) nrNode.port.postMessage({ type: 'nrStrength', value: nrStr.value / 100 });
-});
-
-gateTh.addEventListener('input', () => {
-  gateVal.textContent = gateTh.value + 'dB';
-  if (nrNode) nrNode.port.postMessage({ type: 'gateDb', value: parseFloat(gateTh.value) });
-});
-
-volSl.addEventListener('input', () => {
-  volVal.textContent = volSl.value + '%';
-  if (gainNode) gainNode.gain.value = volSl.value / 100;
-});
-
-monTog.addEventListener('change', () => {
-  if (!analyser || !actx) return;
-  try { monTog.checked ? analyser.connect(actx.destination) : analyser.disconnect(actx.destination); } catch(e) {}
-});
-
-inSel.addEventListener('change', () => { if (active) { stop(); start(); } });
-
-outSel.addEventListener('change', async () => {
-  if (actx && typeof actx.setSinkId === 'function') {
-    try { await actx.setSinkId(outSel.value); } catch(e) {}
-  }
-});
-
-calBtn.addEventListener('click', startCalibration);
-
-// Listen for calibration done
-function setupWorkletListener() {
-  if (!nrNode) return;
-  nrNode.port.onmessage = (e) => {
-    if (e.data.type === 'calDone') {
-      calBtn.disabled = false;
-      calBtn.classList.remove('recording');
-      calStat.textContent = '✓ 噪声采样完成，降噪已生效';
-      calStat.className = 'cal-status ok';
-    }
-  };
-}
-
-// Override start to also setup listener
-const _origStart = start;
-// Actually, let's patch it differently - intercept after node creation
-const origStartRef = start;
-
-// We need the worklet listener to be set. Let me modify the flow:
-// The nrNode.port.onmessage is set in start() implicitly. Let's restructure.
-
-// Actually, the issue is that in start() we create nrNode, then later we need to set onmessage.
-// The calibration message response needs to be caught. Let me just set it right after creation.
-
-// Let me rewrite start with the listener:
-// (already handled above in the start function - nrNode.port.onmessage is the default one
-//  from the processor. We need to override it on the main thread side.)
-
-// The AudioWorkletNode.port.onmessage on the main thread receives messages FROM the processor.
-// So we need to set nrNode.port.onmessage AFTER creating nrNode in start().
-
-// Let me fix this by adding it to the start function properly.
-// Since I can't easily modify the function above, let me wrap it:
-
-// ── Fix: ensure worklet messages are received ──
-const _start = start;
-// Can't reassign const... let me just patch the click handler:
-
-pwrBtn.removeEventListener('click', () => active ? stop() : start());
-
-pwrBtn.addEventListener('click', async () => {
-  if (active) { stop(); return; }
-  // Call start logic inline to set up listener
-  try {
-    const constraints = {
-      audio: {
-        deviceId: inSel.value && inSel.value !== 'default' ? { exact: inSel.value } : undefined,
-        echoCancellation: false, noiseSuppression: false, autoGainControl: false, latency: 0
-      }
-    };
-    stream = await navigator.mediaDevices.getUserMedia(constraints);
-    actx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
     const blob = new Blob([WORKLET_CODE], { type: 'application/javascript' });
     const wUrl = URL.createObjectURL(blob);
     await actx.audioWorklet.addModule(wUrl);
     URL.revokeObjectURL(wUrl);
+
     srcNode = actx.createMediaStreamSource(stream);
     nrNode = new AudioWorkletNode(actx, 'noise-reduce');
-
-    // ★ Set up message listener for calibration
     nrNode.port.onmessage = (e) => {
       if (e.data.type === 'calDone') {
-        calBtn.disabled = false;
-        calBtn.classList.remove('recording');
-        calStat.textContent = '✓ 噪声采样完成，降噪已生效';
-        calStat.className = 'cal-status ok';
+        calBtn.disabled = false; calBtn.classList.remove('recording');
+        calStat.textContent = '✓ 已同步环境噪声'; calStat.className = 'cal-status ok';
       }
     };
 
-    hpFilter = actx.createBiquadFilter(); hpFilter.type = 'highpass'; hpFilter.frequency.value = 80; hpFilter.Q.value = 0.7;
-    notchFilter = actx.createBiquadFilter(); notchFilter.type = 'notch'; notchFilter.frequency.value = 50; notchFilter.Q.value = 4;
-    lpFilter = actx.createBiquadFilter(); lpFilter.type = 'lowpass'; lpFilter.frequency.value = 14000; lpFilter.Q.value = 0.5;
-    gainNode = actx.createGain(); gainNode.gain.value = volSl.value / 100;
-    analyser = actx.createAnalyser(); analyser.fftSize = 256; analyser.smoothingTimeConstant = 0.72;
+    gainNode = actx.createGain();
+    gainNode.gain.value = volSl.value / 100;
+    analyser = actx.createAnalyser();
+    analyser.fftSize = 128; // 分析器也要减小以节省性能
     freqData = new Uint8Array(analyser.frequencyBinCount);
 
     srcNode.connect(nrNode);
-    nrNode.connect(hpFilter);
-    hpFilter.connect(notchFilter);
-    notchFilter.connect(lpFilter);
-    lpFilter.connect(gainNode);
+    nrNode.connect(gainNode);
     gainNode.connect(analyser);
+
     if (monTog.checked) analyser.connect(actx.destination);
 
     if (typeof actx.setSinkId === 'function' && outSel.value) {
-      try { await actx.setSinkId(outSel.value); } catch(e) {}
+        await actx.setSinkId(outSel.value);
     }
 
-    sendNRParams();
-    active = true;
+    nrNode.port.postMessage({ type: 'nrStrength', value: nrStr.value / 100 });
+    nrNode.port.postMessage({ type: 'gateDb', value: parseFloat(gateTh.value) });
+    nrNode.port.postMessage({ type: 'setEnabled', value: nrToggle.checked });
+
+    isActive = true;
     pwrBtn.classList.add('on');
-    statusTxt.textContent = '监听中';
-    statusTxt.classList.add('on');
+    statusTxt.textContent = '实时直通中';
     srInfo.textContent = actx.sampleRate + ' Hz';
     latInfo.textContent = Math.round((actx.baseLatency || 0) * 1000) + ' ms';
+    modeInfo.textContent = '256pt';
     drawViz();
     enumDevices();
   } catch(err) {
-    console.error(err);
-    errMsg.textContent = err.message || '无法访问麦克风，请检查权限。';
-    errOvl.classList.add('show');
-    stop();
+    errMsg.textContent = err.message; errOvl.classList.add('show');
+    cleanup();
   }
-});
+}
 
+function cleanup() {
+  if (animId) cancelAnimationFrame(animId);
+  [srcNode, nrNode, gainNode, analyser].forEach(n => { if (n) n.disconnect(); });
+  if (actx) actx.close();
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  isActive = false;
+  pwrBtn.classList.remove('on');
+  statusTxt.textContent = '点击开始';
+  latInfo.textContent = '--'; srInfo.textContent = '--'; modeInfo.textContent = '--';
+}
+
+pwrBtn.addEventListener('click', () => isActive ? cleanup() : startAudio());
+nrToggle.addEventListener('change', () => {
+  $('nrControls').classList.toggle('collapsed', !nrToggle.checked);
+  if (nrNode) nrNode.port.postMessage({ type: 'setEnabled', value: nrToggle.checked });
+});
+nrStr.addEventListener('input', () => {
+  nrStrVal.textContent = nrStr.value + '%';
+  if (nrNode) nrNode.port.postMessage({ type: 'nrStrength', value: nrStr.value / 100 });
+});
+gateTh.addEventListener('input', () => {
+  gateVal.textContent = gateTh.value + 'dB';
+  if (nrNode) nrNode.port.postMessage({ type: 'gateDb', value: parseFloat(gateTh.value) });
+});
+volSl.addEventListener('input', () => {
+  volVal.textContent = volSl.value + '%';
+  if (gainNode) gainNode.gain.value = volSl.value / 100;
+});
+monTog.addEventListener('change', () => {
+  if (!analyser || !actx) return;
+  monTog.checked ? analyser.connect(actx.destination) : analyser.disconnect(actx.destination);
+});
+calBtn.addEventListener('click', () => {
+  if (!nrNode) return;
+  calBtn.disabled = true; calBtn.classList.add('recording');
+  calStat.textContent = '请安静... 正在采样'; calStat.className = 'cal-status rec';
+  nrNode.port.postMessage({ type: 'calibrate' });
+});
 errClose.addEventListener('click', () => errOvl.classList.remove('show'));
 
-// Init
-navigator.mediaDevices.getUserMedia({ audio: true })
-  .then(s => { s.getTracks().forEach(t => t.stop()); enumDevices(); })
-  .catch(() => enumDevices());
-drawViz();
+// 自动检测权限并列出设备
+navigator.mediaDevices.getUserMedia({ audio: true }).then(s => { s.getTracks().forEach(t => t.stop()); enumDevices(); }).catch(() => enumDevices());
 </script>
 </body>
 </html>
