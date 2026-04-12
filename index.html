@@ -3,231 +3,157 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Audio Passthrough Pro - Low Latency</title>
+<title>KTV Pro - Realtime Low Latency</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
-/* 保持原有精致 UI 样式 */
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}:root{--bg:#08080e;--s1:#0e0e18;--s2:#151522;--s3:#1c1c2e;--accent:#00ffc8;--accent-dim:#00ffc828;--accent-glow:#00ffc850;--amber:#ffb020;--amber-dim:#ffb02028;--amber-glow:#ffb02060;--danger:#ff4466;--text:#e8e8f0;--muted:#5a5a72;--ring:#252538}html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;overflow-x:hidden;-webkit-tap-highlight-color:transparent;user-select:none}body{display:flex;flex-direction:column;align-items:center;padding:16px 14px 32px;position:relative}body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 70% 40% at 50% -10%,#00ffc806,transparent 70%),radial-gradient(ellipse 50% 50% at 90% 90%,#0a0a1a,transparent 60%);pointer-events:none;z-index:0}.grain{position:fixed;inset:0;pointer-events:none;z-index:999;opacity:.025;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:200px}.app{position:relative;z-index:1;width:100%;max-width:400px;display:flex;flex-direction:column;align-items:center;gap:18px}.header{text-align:center}.header h1{font-family:'Space Mono',monospace;font-size:13px;letter-spacing:.35em;text-transform:uppercase;color:var(--muted);font-weight:400}.header .sub{font-size:10px;color:var(--muted);opacity:.45;margin-top:3px;font-family:'Space Mono',monospace;letter-spacing:.08em}.viz-wrap{width:100%;aspect-ratio:2.2/1;position:relative;border-radius:14px;background:var(--s1);border:1px solid var(--ring);overflow:hidden}.viz-wrap canvas{width:100%;height:100%;display:block}.level-row{width:100%;display:flex;align-items:center;gap:10px}.level-row .lbl{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.15em;width:24px;flex-shrink:0}.level-track{flex:1;height:5px;background:var(--s2);border-radius:3px;overflow:hidden}.level-fill{height:100%;width:0%;border-radius:3px;background:var(--accent);box-shadow:0 0 10px var(--accent-glow);transition:width .05s linear}.level-db{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);width:52px;text-align:right;flex-shrink:0}.power-btn{width:100px;height:100px;border-radius:50%;border:2px solid var(--ring);background:var(--s1);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .3s cubic-bezier(.4,0,.2,1);position:relative;outline:none;-webkit-appearance:none}.power-btn svg{width:32px;height:32px;color:var(--accent);transition:all .3s}.power-btn .ico-stop{display:none}.power-btn.on{border-color:var(--accent);background:#00ffc808;animation:pulse 2s ease-in-out infinite}.power-btn.on .ico-mic{display:none}.power-btn.on .ico-stop{display:block}@keyframes pulse{0%,100%{box-shadow:0 0 36px var(--accent-dim)}50%{box-shadow:0 0 50px var(--accent-glow)}}.status{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.2em;color:var(--muted);transition:color .3s}.status.on{color:var(--accent)}.panel{width:100%;background:var(--s1);border:1px solid var(--ring);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:12px}.panel-title{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.2em;text-transform:uppercase}.slider-row{display:flex;align-items:center;gap:10px}.slider-row .sl-label{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.1em;width:56px;flex-shrink:0}.slider-row .sl-val{font-family:'Space Mono',monospace;font-size:10px;color:var(--accent);width:36px;text-align:right;flex-shrink:0}input[type=range]{flex:1;-webkit-appearance:none;appearance:none;height:3px;background:var(--s3);border-radius:2px;outline:none}input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid var(--bg)}input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid var(--bg)}.trow{display:flex;align-items:center;justify-content:space-between}.trow span{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.15em;text-transform:uppercase}.toggle{width:36px;height:18px;border-radius:9px;background:var(--s3);border:1px solid var(--ring);cursor:pointer;position:relative;transition:all .3s;-webkit-appearance:none;appearance:none;outline:none}.toggle:checked{background:var(--accent-dim);border-color:var(--accent)}.toggle::after{content:'';position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:var(--muted);transition:0.3s}.toggle:checked::after{left:20px;background:var(--accent)}.dev-sel{flex:1;background:var(--s2);border:1px solid var(--ring);border-radius:7px;color:var(--text);font-family:'Outfit',sans-serif;font-size:11px;padding:7px 10px;outline:none}.info-bar{width:100%;display:flex;justify-content:center;gap:20px}.info-item{font-family:'Space Mono',monospace;font-size:8px;color:var(--muted);opacity:.5;letter-spacing:.1em}.info-item span{color:var(--accent)}
+/* UI 保持一致的高级感 */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}:root{--bg:#08080e;--s1:#0e0e18;--s2:#151522;--s3:#1c1c2e;--accent:#00ffc8;--accent-dim:#00ffc828;--accent-glow:#00ffc850;--amber:#ffb020;--text:#e8e8f0;--muted:#5a5a72;--ring:#252538}html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;overflow-x:hidden}body{display:flex;flex-direction:column;align-items:center;padding:16px 14px 32px}.app{width:100%;max-width:400px;display:flex;flex-direction:column;gap:18px;position:relative;z-index:1}.header{text-align:center}.header h1{font-family:'Space Mono',monospace;font-size:13px;letter-spacing:.35em;text-transform:uppercase;color:var(--muted)}.viz-wrap{width:100%;aspect-ratio:2.2/1;border-radius:14px;background:var(--s1);border:1px solid var(--ring);overflow:hidden}canvas{width:100%;height:100%}.level-row{width:100%;display:flex;align-items:center;gap:10px}.level-track{flex:1;height:5px;background:var(--s2);border-radius:3px;overflow:hidden}.level-fill{height:100%;width:0%;background:var(--accent);box-shadow:0 0 10px var(--accent-glow);transition:width .05s linear}.level-db{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);width:50px;text-align:right}.power-btn{width:80px;height:80px;border-radius:50%;border:2px solid var(--ring);background:var(--s1);cursor:pointer;margin:0 auto;display:flex;align-items:center;justify-content:center;transition:0.3s}.power-btn.on{border-color:var(--accent);box-shadow:0 0 30px var(--accent-dim)}.panel{width:100%;background:var(--s1);border:1px solid var(--ring);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:12px}.panel-title{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:0.1em}.slider-row{display:flex;align-items:center;gap:10px}input[type=range]{flex:1;height:3px;background:var(--s3);-webkit-appearance:none;outline:none}input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent)}.dev-sel{width:100%;background:var(--s2);border:1px solid var(--ring);color:var(--text);padding:8px;border-radius:6px;font-size:11px}.info-bar{width:100%;display:flex;justify-content:space-between;padding:0 10px}.info-item{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted)}span.val{color:var(--accent)}
 </style>
 </head>
 <body>
-<div class="grain"></div>
 <div class="app">
-  <div class="header">
-    <h1>Audio Passthrough</h1>
-    <div class="sub">原生极低延迟 · 高保真模式</div>
-  </div>
-
+  <div class="header"><h1>KTV MIC PRO</h1></div>
   <div class="viz-wrap"><canvas id="viz"></canvas></div>
-
   <div class="level-row">
-    <span class="lbl">IN</span>
     <div class="level-track"><div class="level-fill" id="lvlFill"></div></div>
     <span class="level-db" id="lvlDb">-∞ dB</span>
   </div>
 
   <button class="power-btn" id="pwrBtn">
-    <svg class="ico-mic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="9" y="1" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="17" x2="12" y2="21"/><line x1="8" y1="21" x2="16" y2="21"/></svg>
-    <svg class="ico-stop" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+    <svg id="micIco" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v11m-7-5a7 7 0 0 0 14 0"/></svg>
   </button>
-  <span class="status" id="statusTxt">点击开始</span>
 
   <div class="panel">
-    <span class="panel-title">主输出音量</span>
+    <span class="panel-title">主音量 / VOLUME</span>
     <div class="slider-row">
       <input type="range" id="volSlider" min="0" max="200" value="100">
-      <span class="sl-val" id="volVal">100%</span>
+      <span style="font-size:10px; width:30px" id="volVal">100</span>
     </div>
-    <div class="trow">
-      <span>实时监听 (Monitor)</span>
-      <input type="checkbox" class="toggle" id="monToggle" checked>
+    
+    <span class="panel-title">混响深度 / REVERB (KTV MODE)</span>
+    <div class="slider-row">
+      <input type="range" id="revSlider" min="0" max="60" value="25">
+      <span style="font-size:10px; width:30px" id="revVal">25</span>
     </div>
   </div>
 
   <div class="panel">
-    <span class="panel-title">设备选择</span>
-    <div class="slider-row">
-      <select class="dev-sel" id="inSel"></select>
-    </div>
+    <select class="dev-sel" id="inSel"></select>
   </div>
 
   <div class="info-bar">
-    <div class="info-item">延迟 <span>Ultra-Low</span></div>
-    <div class="info-item">采样 <span id="srInfo">--</span></div>
-    <div class="info-item">模式 <span>Direct</span></div>
+    <div class="info-item">实时延迟: <span class="val" id="latVal">0.00</span> ms</div>
+    <div class="info-item">采样率: <span class="val" id="srVal">--</span></div>
   </div>
 </div>
 
 <script>
 const $ = id => document.getElementById(id);
-const pwrBtn = $('pwrBtn'), statusTxt = $('statusTxt'), volSl = $('volSlider'), volVal = $('volVal'), 
-      monTog = $('monToggle'), inSel = $('inSel'), lvlFill = $('lvlFill'), lvlDb = $('lvlDb'), 
-      srInfo = $('srInfo'), canvas = $('viz'), cCtx = canvas.getContext('2d');
+let actx, stream, src, gain, delay, feedback, fbGain, compressor, analyser, isActive = false, animId;
 
-let actx = null, srcNode = null, gainNode = null, filterNode = null, compressor = null, analyser = null, 
-    stream = null, isActive = false, animId = null;
+async function start() {
+    try {
+        const constraints = { audio: { deviceId: $("inSel").value ? {exact: $("inSel").value} : undefined, echoCancellation: false, noiseSuppression: false, autoGainControl: false } };
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+        
+        actx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 0 });
+        src = actx.createMediaStreamSource(stream);
 
-// 音量总增益补偿（解决音量小的问题）
-const MAKEUP_GAIN = 2.5;
+        // 1. 基础处理：压缩器防止爆音
+        compressor = actx.createDynamicsCompressor();
+        
+        // 2. 音量控制
+        gain = actx.createGain();
+        
+        // 3. KTV 回声电路 (Delay + Feedback Loop)
+        delay = actx.createDelay();
+        delay.delayTime.value = 0.15; // 150ms 的回声延迟，KTV标准
+        fbGain = actx.createGain();   // 反馈增益（决定回声多少次）
+        
+        analyser = actx.createAnalyser();
+        analyser.fftSize = 256;
 
-async function startAudio() {
-  try {
-    // 1. 请求麦克风，关闭所有软件预处理以降低延迟和提升音质
-    const constraints = {
-      audio: {
-        deviceId: inSel.value ? { exact: inSel.value } : undefined,
-        echoCancellation: false,
-        noiseSuppression: false,
-        autoGainControl: false,
-        latency: 0
-      }
-    };
-    stream = await navigator.mediaDevices.getUserMedia(constraints);
+        // 链路连接：
+        // (1) 直通干声：Src -> Compressor -> Gain -> Analyser -> Dest
+        src.connect(compressor);
+        compressor.connect(gain);
+        gain.connect(analyser);
+        analyser.connect(actx.destination);
 
-    // 2. 初始化 AudioContext，指定最低延迟提示
-    actx = new (window.AudioContext || window.webkitAudioContext)({
-      latencyHint: 0,
-      sampleRate: 48000 // 强制硬件常用采样率
-    });
+        // (2) 湿声回路：Gain -> Delay -> FeedbackGain -> Delay (循环) -> Analyser
+        gain.connect(delay);
+        delay.connect(fbGain);
+        fbGain.connect(delay); // 闭环形成重复回声
+        fbGain.connect(analyser); // 将回声送往输出
 
-    srcNode = actx.createMediaStreamSource(stream);
-
-    // 3. 原生低通滤波（滤除高频底噪，使声音更厚实）
-    filterNode = actx.createBiquadFilter();
-    filterNode.type = 'lowpass';
-    filterNode.frequency.value = 8500;
-
-    // 4. 原生动态压缩（在硬件层平滑音量，防止爆音且增加细节）
-    compressor = actx.createDynamicsCompressor();
-    compressor.threshold.setValueAtTime(-35, actx.currentTime);
-    compressor.knee.setValueAtTime(30, actx.currentTime);
-    compressor.ratio.setValueAtTime(12, actx.currentTime);
-    compressor.attack.setValueAtTime(0.003, actx.currentTime);
-    compressor.release.setValueAtTime(0.25, actx.currentTime);
-
-    // 5. 增益节点（音量控制）
-    gainNode = actx.createGain();
-    updateVolume();
-
-    // 6. 分析器（频谱显示）
-    analyser = actx.createAnalyser();
-    analyser.fftSize = 256;
-
-    // 7. 连接链路：Mic -> Filter -> Compressor -> Gain -> Analyser -> Output
-    srcNode.connect(filterNode);
-    filterNode.connect(compressor);
-    compressor.connect(gainNode);
-    gainNode.connect(analyser);
-
-    if (monTog.checked) analyser.connect(actx.destination);
-
-    isActive = true;
-    pwrBtn.classList.add('on');
-    statusTxt.textContent = '正在直通';
-    statusTxt.classList.add('on');
-    srInfo.textContent = actx.sampleRate + ' Hz';
-    draw();
-  } catch (e) {
-    alert("无法启动音频: " + e.message);
-    cleanup();
-  }
+        updateParams();
+        isActive = true;
+        $("pwrBtn").classList.add("on");
+        $("srVal").textContent = actx.sampleRate + "Hz";
+        render();
+    } catch(e) { alert(e); }
 }
 
-async function cleanup() {
-  isActive = false;
-  if (animId) cancelAnimationFrame(animId);
-  
-  // 彻底停止麦克风采集线
-  if (stream) {
-    stream.getTracks().forEach(t => t.stop());
-    stream = null;
-  }
-
-  // 断开所有节点
-  [srcNode, filterNode, compressor, gainNode, analyser].forEach(n => {
-    if (n) try { n.disconnect(); } catch(i) {}
-  });
-
-  // 关闭上下文并置空
-  if (actx) {
-    await actx.close();
-    actx = null;
-  }
-
-  pwrBtn.classList.remove('on');
-  statusTxt.textContent = '点击开始';
-  statusTxt.classList.remove('on');
-  lvlFill.style.width = '0%';
-  lvlDb.textContent = '-∞ dB';
+function updateParams() {
+    if (!actx) return;
+    // 更新音量 (x2.5 补偿)
+    gain.gain.setTargetAtTime(($("volSlider").value/100) * 2.5, actx.currentTime, 0.02);
+    // 更新混响深度 (反馈量)
+    const revLevel = $("revSlider").value / 100; // 0.0 - 0.6
+    fbGain.gain.setTargetAtTime(revLevel, actx.currentTime, 0.02);
 }
 
-function updateVolume() {
-  if (gainNode) {
-    const val = (volSl.value / 100) * MAKEUP_GAIN;
-    // 使用平滑过渡防止点击声
-    gainNode.gain.setTargetAtTime(val, actx.currentTime, 0.02);
-  }
+function render() {
+    if (!isActive) return;
+
+    // 计算实时延迟 (ms)
+    // baseLatency (硬件缓冲) + outputLatency (系统调度)
+    const lat = (actx.baseLatency || 0) + (actx.outputLatency || 0);
+    $("latVal").textContent = (lat * 1000).toFixed(2);
+
+    // 绘制频谱
+    const canvas = $("viz"), ctx = canvas.getContext("2d");
+    const w = canvas.width, h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+    const data = new Uint8Array(analyser.frequencyBinCount);
+    analyser.getByteFrequencyData(data);
+    ctx.fillStyle = "#00ffc8";
+    const barW = w / data.length;
+    for(let i=0; i<data.length; i++) {
+        const val = data[i]/255 * h;
+        ctx.fillRect(i*barW, h-val, barW-1, val);
+    }
+
+    // 更新电平条
+    const td = new Uint8Array(analyser.frequencyBinCount);
+    analyser.getByteTimeDomainData(td);
+    let sum = 0;
+    for(let i=0; i<td.length; i++) { let v = (td[i]-128)/128; sum += v*v; }
+    const rms = Math.sqrt(sum/td.length);
+    $("lvlFill").style.width = Math.min(100, rms*400) + "%";
+    $("lvlDb").textContent = rms > 0.001 ? (20*Math.log10(rms)).toFixed(1) + " dB" : "-∞ dB";
+
+    animId = requestAnimationFrame(render);
 }
 
-function draw() {
-  if (!isActive) return;
-  
-  const w = canvas.width / devicePixelRatio, h = canvas.height / devicePixelRatio;
-  cCtx.clearRect(0, 0, w, h);
-  
-  const freqData = new Uint8Array(analyser.frequencyBinCount);
-  analyser.getByteFrequencyData(freqData);
-  
-  const bars = 40, bw = w / bars;
-  for (let i = 0; i < bars; i++) {
-    const v = freqData[Math.floor(i * freqData.length / bars)] / 255;
-    cCtx.fillStyle = '#00ffc8';
-    cCtx.fillRect(i * bw + 1, h - (v * h * 0.9), bw - 2, v * h * 0.9);
-  }
-
-  const td = new Uint8Array(analyser.frequencyBinCount);
-  analyser.getByteTimeDomainData(td);
-  let sum = 0;
-  for (let i = 0; i < td.length; i++) { const v = (td[i]-128)/128; sum += v*v; }
-  const rms = Math.sqrt(sum / td.length);
-  lvlFill.style.width = Math.min(100, rms * 400) + '%';
-  lvlDb.textContent = (rms > 0.0001 ? (20*Math.log10(rms)).toFixed(1) : '-∞') + ' dB';
-  
-  animId = requestAnimationFrame(draw);
+async function stop() {
+    isActive = false;
+    cancelAnimationFrame(animId);
+    if(stream) stream.getTracks().forEach(t => t.stop());
+    if(actx) await actx.close();
+    $("pwrBtn").classList.remove("on");
+    $("latVal").textContent = "0.00";
 }
 
-// 事件监听
-pwrBtn.onclick = () => isActive ? cleanup() : startAudio();
-volSl.oninput = () => {
-  volVal.textContent = volSl.value + '%';
-  updateVolume();
-};
-monTog.onchange = () => {
-  if (!analyser || !actx) return;
-  if (monTog.checked) analyser.connect(actx.destination);
-  else analyser.disconnect(actx.destination);
-};
+$("pwrBtn").onclick = () => isActive ? stop() : start();
+$("volSlider").oninput = () => { $("volVal").textContent = $("volSlider").value; updateParams(); };
+$("revSlider").oninput = () => { $("revVal").textContent = $("revSlider").value; updateParams(); };
 
-// 画布尺寸
-function resize() {
-  const r = canvas.parentElement.getBoundingClientRect();
-  canvas.width = r.width * devicePixelRatio;
-  canvas.height = r.height * devicePixelRatio;
-  cCtx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
-}
-window.onresize = resize; resize();
-
-// 初始化设备
-async function initDevs() {
-  try {
-    await navigator.mediaDevices.getUserMedia({ audio: true });
-    const devs = await navigator.mediaDevices.enumerateDevices();
-    inSel.innerHTML = devs.filter(d => d.kind === 'audioinput')
-      .map(d => `<option value="${d.deviceId}">${d.label || '麦克风'}</option>`).join('');
-  } catch(e) {}
-}
-initDevs();
+// 初始化设备列表
+navigator.mediaDevices.enumerateDevices().then(devs => {
+    $("inSel").innerHTML = devs.filter(d => d.kind === 'audioinput').map(d => `<option value="${d.deviceId}">${d.label||'Mic'}</option>`).join('');
+});
 </script>
 </body>
 </html>
