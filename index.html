@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Audio Passthrough Pro</title>
+<title>Audio Passthrough Pro - Low Latency</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
-/* 保持原有样式不变 */
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}:root{--bg:#08080e;--s1:#0e0e18;--s2:#151522;--s3:#1c1c2e;--accent:#00ffc8;--accent-dim:#00ffc828;--accent-glow:#00ffc850;--amber:#ffb020;--amber-dim:#ffb02028;--amber-glow:#ffb02060;--danger:#ff4466;--text:#e8e8f0;--muted:#5a5a72;--ring:#252538}html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;overflow-x:hidden;-webkit-tap-highlight-color:transparent;user-select:none}body{display:flex;flex-direction:column;align-items:center;padding:16px 14px 32px;position:relative}body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 70% 40% at 50% -10%,#00ffc806,transparent 70%),radial-gradient(ellipse 50% 50% at 90% 90%,#0a0a1a,transparent 60%);pointer-events:none;z-index:0}.grain{position:fixed;inset:0;pointer-events:none;z-index:999;opacity:.025;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:200px}.app{position:relative;z-index:1;width:100%;max-width:400px;display:flex;flex-direction:column;align-items:center;gap:18px}.header{text-align:center}.header h1{font-family:'Space Mono',monospace;font-size:13px;letter-spacing:.35em;text-transform:uppercase;color:var(--muted);font-weight:400}.header .sub{font-size:10px;color:var(--muted);opacity:.45;margin-top:3px;font-family:'Space Mono',monospace;letter-spacing:.08em}.viz-wrap{width:100%;aspect-ratio:2.2/1;position:relative;border-radius:14px;background:var(--s1);border:1px solid var(--ring);overflow:hidden}.viz-wrap::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 50%,var(--bg) 100%);z-index:2;pointer-events:none}.viz-wrap canvas{width:100%;height:100%;display:block}.level-row{width:100%;display:flex;align-items:center;gap:10px}.level-row .lbl{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.15em;width:24px;flex-shrink:0}.level-track{flex:1;height:5px;background:var(--s2);border-radius:3px;overflow:hidden}.level-fill{height:100%;width:0%;border-radius:3px;background:var(--accent);box-shadow:0 0 10px var(--accent-glow);transition:width .05s linear}.level-fill.hot{background:var(--danger);box-shadow:0 0 10px #ff446644}.level-db{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);width:52px;text-align:right;flex-shrink:0}.power-btn{width:100px;height:100px;border-radius:50%;border:2px solid var(--ring);background:var(--s1);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .3s cubic-bezier(.4,0,.2,1);position:relative;outline:none;-webkit-appearance:none}.power-btn svg{width:32px;height:32px;color:var(--accent);transition:all .3s}.power-btn .ico-stop{display:none}.power-btn:hover{border-color:var(--accent);box-shadow:0 0 24px var(--accent-dim)}.power-btn:active{transform:scale(.94)}.power-btn.on{border-color:var(--accent);background:#00ffc808;box-shadow:0 0 36px var(--accent-dim),inset 0 0 24px #00ffc806;animation:pulse 2s ease-in-out infinite}.power-btn.on .ico-mic{display:none}.power-btn.on .ico-stop{display:block}@keyframes pulse{0%,100%{box-shadow:0 0 36px var(--accent-dim),inset 0 0 24px #00ffc806}50%{box-shadow:0 0 50px var(--accent-glow),inset 0 0 32px #00ffc810}}.status{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.2em;color:var(--muted);transition:color .3s}.status.on{color:var(--accent)}.panel{width:100%;background:var(--s1);border:1px solid var(--ring);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:12px}.panel-title{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.2em;text-transform:uppercase}.nr-toggle-row{display:flex;align-items:center;justify-content:space-between}.nr-controls{display:flex;flex-direction:column;gap:10px;overflow:hidden;max-height:300px;opacity:1;transition:max-height .35s ease,opacity .25s ease}.nr-controls.collapsed{max-height:0;opacity:0;pointer-events:none}.toggle{width:40px;height:22px;border-radius:11px;background:var(--s3);border:1px solid var(--ring);cursor:pointer;position:relative;transition:all .3s;-webkit-appearance:none;appearance:none;outline:none;flex-shrink:0}.toggle::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--muted);transition:all .3s cubic-bezier(.4,0,.2,1)}.toggle:checked{background:var(--accent-dim);border-color:var(--accent)}.toggle:checked::after{left:20px;background:var(--accent);box-shadow:0 0 6px var(--accent-glow)}.slider-row{display:flex;align-items:center;gap:10px}.slider-row .sl-label{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.1em;width:56px;flex-shrink:0}.slider-row .sl-val{font-family:'Space Mono',monospace;font-size:10px;color:var(--accent);width:36px;text-align:right;flex-shrink:0}input[type=range]{flex:1;-webkit-appearance:none;appearance:none;height:3px;background:var(--s3);border-radius:2px;outline:none}input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 0 10px var(--accent-glow);border:2px solid var(--bg)}input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 0 10px var(--accent-glow);border:2px solid var(--bg)}.cal-btn{background:var(--s3);border:1px solid var(--ring);color:var(--amber);font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.12em;padding:7px 14px;border-radius:8px;cursor:pointer;transition:all .25s;-webkit-appearance:none;text-transform:uppercase;white-space:nowrap}.cal-btn:hover{border-color:var(--amber);background:var(--amber-dim)}.cal-btn:disabled{opacity:.4;cursor:not-allowed}.cal-btn.recording{border-color:var(--amber);background:var(--amber-dim);animation:rec-pulse 1s ease-in-out infinite}@keyframes rec-pulse{0%,100%{box-shadow:0 0 8px var(--amber-dim)}50%{box-shadow:0 0 20px var(--amber-glow)}}.cal-status{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);text-align:center;min-height:14px;transition:color .3s}.cal-status.ok{color:var(--accent)}.cal-status.rec{color:var(--amber)}.vol-row{display:flex;align-items:center;gap:10px}.vol-icon{width:18px;height:18px;color:var(--muted);flex-shrink:0}.trow{display:flex;align-items:center;justify-content:space-between}.trow span{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.15em;text-transform:uppercase}.dev-row{display:flex;align-items:center;gap:8px}.dev-row label{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.1em;width:36px;flex-shrink:0;text-transform:uppercase}.dev-sel{flex:1;background:var(--s2);border:1px solid var(--ring);border-radius:7px;color:var(--text);font-family:'Outfit',sans-serif;font-size:11px;padding:7px 10px;outline:none;-webkit-appearance:none;appearance:none;cursor:pointer}.dev-sel:focus{border-color:var(--accent)}.info-bar{width:100%;display:flex;justify-content:center;gap:20px}.info-item{font-family:'Space Mono',monospace;font-size:8px;color:var(--muted);opacity:.5;letter-spacing:.1em}.info-item span{color:var(--accent);opacity:.8}.err-overlay{display:none;position:fixed;inset:0;background:#08080eee;z-index:1000;align-items:center;justify-content:center;padding:24px}.err-overlay.show{display:flex}.err-box{background:var(--s1);border:1px solid var(--danger);border-radius:14px;padding:28px;text-align:center;max-width:320px}.err-box h2{color:var(--danger);font-size:15px;margin-bottom:10px}.err-box p{color:var(--muted);font-size:12px;line-height:1.6;margin-bottom:18px}.err-box button{background:var(--danger);color:#fff;border:none;border-radius:8px;padding:9px 24px;font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.1em;cursor:pointer}
+/* 保持原有精致 UI 样式 */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}:root{--bg:#08080e;--s1:#0e0e18;--s2:#151522;--s3:#1c1c2e;--accent:#00ffc8;--accent-dim:#00ffc828;--accent-glow:#00ffc850;--amber:#ffb020;--amber-dim:#ffb02028;--amber-glow:#ffb02060;--danger:#ff4466;--text:#e8e8f0;--muted:#5a5a72;--ring:#252538}html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;overflow-x:hidden;-webkit-tap-highlight-color:transparent;user-select:none}body{display:flex;flex-direction:column;align-items:center;padding:16px 14px 32px;position:relative}body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 70% 40% at 50% -10%,#00ffc806,transparent 70%),radial-gradient(ellipse 50% 50% at 90% 90%,#0a0a1a,transparent 60%);pointer-events:none;z-index:0}.grain{position:fixed;inset:0;pointer-events:none;z-index:999;opacity:.025;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:200px}.app{position:relative;z-index:1;width:100%;max-width:400px;display:flex;flex-direction:column;align-items:center;gap:18px}.header{text-align:center}.header h1{font-family:'Space Mono',monospace;font-size:13px;letter-spacing:.35em;text-transform:uppercase;color:var(--muted);font-weight:400}.header .sub{font-size:10px;color:var(--muted);opacity:.45;margin-top:3px;font-family:'Space Mono',monospace;letter-spacing:.08em}.viz-wrap{width:100%;aspect-ratio:2.2/1;position:relative;border-radius:14px;background:var(--s1);border:1px solid var(--ring);overflow:hidden}.viz-wrap canvas{width:100%;height:100%;display:block}.level-row{width:100%;display:flex;align-items:center;gap:10px}.level-row .lbl{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.15em;width:24px;flex-shrink:0}.level-track{flex:1;height:5px;background:var(--s2);border-radius:3px;overflow:hidden}.level-fill{height:100%;width:0%;border-radius:3px;background:var(--accent);box-shadow:0 0 10px var(--accent-glow);transition:width .05s linear}.level-db{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);width:52px;text-align:right;flex-shrink:0}.power-btn{width:100px;height:100px;border-radius:50%;border:2px solid var(--ring);background:var(--s1);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .3s cubic-bezier(.4,0,.2,1);position:relative;outline:none;-webkit-appearance:none}.power-btn svg{width:32px;height:32px;color:var(--accent);transition:all .3s}.power-btn .ico-stop{display:none}.power-btn.on{border-color:var(--accent);background:#00ffc808;animation:pulse 2s ease-in-out infinite}.power-btn.on .ico-mic{display:none}.power-btn.on .ico-stop{display:block}@keyframes pulse{0%,100%{box-shadow:0 0 36px var(--accent-dim)}50%{box-shadow:0 0 50px var(--accent-glow)}}.status{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.2em;color:var(--muted);transition:color .3s}.status.on{color:var(--accent)}.panel{width:100%;background:var(--s1);border:1px solid var(--ring);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:12px}.panel-title{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.2em;text-transform:uppercase}.slider-row{display:flex;align-items:center;gap:10px}.slider-row .sl-label{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.1em;width:56px;flex-shrink:0}.slider-row .sl-val{font-family:'Space Mono',monospace;font-size:10px;color:var(--accent);width:36px;text-align:right;flex-shrink:0}input[type=range]{flex:1;-webkit-appearance:none;appearance:none;height:3px;background:var(--s3);border-radius:2px;outline:none}input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid var(--bg)}input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid var(--bg)}.trow{display:flex;align-items:center;justify-content:space-between}.trow span{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.15em;text-transform:uppercase}.toggle{width:36px;height:18px;border-radius:9px;background:var(--s3);border:1px solid var(--ring);cursor:pointer;position:relative;transition:all .3s;-webkit-appearance:none;appearance:none;outline:none}.toggle:checked{background:var(--accent-dim);border-color:var(--accent)}.toggle::after{content:'';position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:var(--muted);transition:0.3s}.toggle:checked::after{left:20px;background:var(--accent)}.dev-sel{flex:1;background:var(--s2);border:1px solid var(--ring);border-radius:7px;color:var(--text);font-family:'Outfit',sans-serif;font-size:11px;padding:7px 10px;outline:none}.info-bar{width:100%;display:flex;justify-content:center;gap:20px}.info-item{font-family:'Space Mono',monospace;font-size:8px;color:var(--muted);opacity:.5;letter-spacing:.1em}.info-item span{color:var(--accent)}
 </style>
 </head>
 <body>
@@ -16,44 +16,28 @@
 <div class="app">
   <div class="header">
     <h1>Audio Passthrough</h1>
-    <div class="sub">极速音频直通 · 音质增强版</div>
+    <div class="sub">原生极低延迟 · 高保真模式</div>
   </div>
+
   <div class="viz-wrap"><canvas id="viz"></canvas></div>
+
   <div class="level-row">
     <span class="lbl">IN</span>
     <div class="level-track"><div class="level-fill" id="lvlFill"></div></div>
     <span class="level-db" id="lvlDb">-∞ dB</span>
   </div>
+
   <button class="power-btn" id="pwrBtn">
     <svg class="ico-mic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="9" y="1" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="17" x2="12" y2="21"/><line x1="8" y1="21" x2="16" y2="21"/></svg>
     <svg class="ico-stop" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
   </button>
   <span class="status" id="statusTxt">点击开始</span>
-  
-  <div class="panel">
-    <div class="nr-toggle-row">
-      <span class="panel-title">智能降噪</span>
-      <input type="checkbox" class="toggle" id="nrToggle" checked>
-    </div>
-    <div class="nr-controls" id="nrControls">
-      <div class="slider-row">
-        <span class="sl-label">降噪强度</span>
-        <input type="range" id="nrStrength" min="0" max="100" value="40">
-        <span class="sl-val" id="nrStrVal">40%</span>
-      </div>
-      <div style="display:flex;align-items:center;gap:10px">
-        <button class="cal-btn" id="calBtn">校准环境噪声</button>
-        <span class="cal-status" id="calStatus">建议在无声环境下校准</span>
-      </div>
-    </div>
-  </div>
 
   <div class="panel">
-    <span class="panel-title">输出调节</span>
-    <div class="vol-row">
-      <svg class="vol-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
-      <input type="range" id="volSlider" min="0" max="250" value="120">
-      <span class="vol-val" id="volVal">120%</span>
+    <span class="panel-title">主输出音量</span>
+    <div class="slider-row">
+      <input type="range" id="volSlider" min="0" max="200" value="100">
+      <span class="sl-val" id="volVal">100%</span>
     </div>
     <div class="trow">
       <span>实时监听 (Monitor)</span>
@@ -63,103 +47,109 @@
 
   <div class="panel">
     <span class="panel-title">设备选择</span>
-    <div class="dev-row"><label>输入</label><select class="dev-sel" id="inSel"></select></div>
-    <div class="dev-row"><label>输出</label><select class="dev-sel" id="outSel"></select></div>
+    <div class="slider-row">
+      <select class="dev-sel" id="inSel"></select>
+    </div>
   </div>
 
   <div class="info-bar">
-    <div class="info-item">延迟 <span id="latInfo">--</span></div>
+    <div class="info-item">延迟 <span>Ultra-Low</span></div>
     <div class="info-item">采样 <span id="srInfo">--</span></div>
-    <div class="info-item">模式 <span id="modeInfo">--</span></div>
+    <div class="info-item">模式 <span>Direct</span></div>
   </div>
 </div>
 
-<div class="err-overlay" id="errOvl">
-  <div class="err-box">
-    <h2>设备异常</h2>
-    <p id="errMsg"></p>
-    <button id="errClose">确定</button>
-  </div>
-</div>
-
+<script>
 const $ = id => document.getElementById(id);
+const pwrBtn = $('pwrBtn'), statusTxt = $('statusTxt'), volSl = $('volSlider'), volVal = $('volVal'), 
+      monTog = $('monToggle'), inSel = $('inSel'), lvlFill = $('lvlFill'), lvlDb = $('lvlDb'), 
+      srInfo = $('srInfo'), canvas = $('viz'), cCtx = canvas.getContext('2d');
 
-const pwrBtn = $('pwrBtn'), statusTxt = $('statusTxt'), nrToggle = $('nrToggle'), 
-      volSl = $('volSlider'), volVal = $('volVal'), monTog = $('monToggle'), 
-      inSel = $('inSel'), outSel = $('outSel'), lvlFill = $('lvlFill'), 
-      lvlDb = $('lvlDb'), latInfo = $('latInfo'), srInfo = $('srInfo'), 
-      modeInfo = $('modeInfo'), canvas = $('viz'), cCtx = canvas.getContext('2d');
+let actx = null, srcNode = null, gainNode = null, filterNode = null, compressor = null, analyser = null, 
+    stream = null, isActive = false, animId = null;
 
-let actx = null, srcNode = null, gainNode = null, analyser = null, stream = null, isActive = false, animId = null;
-
-// 【核心改动】音量补偿系数调高到 3.0，确保声音足够大
-const MASTER_GAIN_BOOST = 3.0;
+// 音量总增益补偿（解决音量小的问题）
+const MAKEUP_GAIN = 2.5;
 
 async function startAudio() {
   try {
-    // 【关键优化】启用内置硬件降噪和自动增益，这比手写算法稳定得多
+    // 1. 请求麦克风，关闭所有软件预处理以降低延迟和提升音质
     const constraints = {
       audio: {
         deviceId: inSel.value ? { exact: inSel.value } : undefined,
-        echoCancellation: true,    // 开启回声消除，防止啸叫
-        noiseSuppression: true,    // 开启内置降噪，消除背景沙沙声
-        autoGainControl: true,     // 开启自动增益
-        latency: 0                 // 尝试最低延迟
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false,
+        latency: 0
       }
     };
-
     stream = await navigator.mediaDevices.getUserMedia(constraints);
-    
-    // 使用默认采样率，避免重采样带来的音质损失
+
+    // 2. 初始化 AudioContext，指定最低延迟提示
     actx = new (window.AudioContext || window.webkitAudioContext)({
-      latencyHint: 'interactive'
+      latencyHint: 0,
+      sampleRate: 48000 // 强制硬件常用采样率
     });
 
     srcNode = actx.createMediaStreamSource(stream);
+
+    // 3. 原生低通滤波（滤除高频底噪，使声音更厚实）
+    filterNode = actx.createBiquadFilter();
+    filterNode.type = 'lowpass';
+    filterNode.frequency.value = 8500;
+
+    // 4. 原生动态压缩（在硬件层平滑音量，防止爆音且增加细节）
+    compressor = actx.createDynamicsCompressor();
+    compressor.threshold.setValueAtTime(-35, actx.currentTime);
+    compressor.knee.setValueAtTime(30, actx.currentTime);
+    compressor.ratio.setValueAtTime(12, actx.currentTime);
+    compressor.attack.setValueAtTime(0.003, actx.currentTime);
+    compressor.release.setValueAtTime(0.25, actx.currentTime);
+
+    // 5. 增益节点（音量控制）
     gainNode = actx.createGain();
-    
-    // 设置音量
     updateVolume();
-    
+
+    // 6. 分析器（频谱显示）
     analyser = actx.createAnalyser();
     analyser.fftSize = 256;
 
-    // 【连线路径简化】Mic -> Gain -> Analyser -> Destination
-    srcNode.connect(gainNode);
+    // 7. 连接链路：Mic -> Filter -> Compressor -> Gain -> Analyser -> Output
+    srcNode.connect(filterNode);
+    filterNode.connect(compressor);
+    compressor.connect(gainNode);
     gainNode.connect(analyser);
 
-    if (monTog.checked) {
-      analyser.connect(actx.destination);
-    }
+    if (monTog.checked) analyser.connect(actx.destination);
 
     isActive = true;
     pwrBtn.classList.add('on');
-    statusTxt.textContent = '稳定监听中';
+    statusTxt.textContent = '正在直通';
+    statusTxt.classList.add('on');
     srInfo.textContent = actx.sampleRate + ' Hz';
-    latInfo.textContent = '硬件加速';
-    modeInfo.textContent = 'Native';
-    
-    drawViz();
-  } catch(err) {
-    alert("启动失败: " + err.message);
+    draw();
+  } catch (e) {
+    alert("无法启动音频: " + e.message);
     cleanup();
   }
 }
 
-// 异步清理函数，确保彻底停止
 async function cleanup() {
   isActive = false;
   if (animId) cancelAnimationFrame(animId);
   
+  // 彻底停止麦克风采集线
   if (stream) {
     stream.getTracks().forEach(t => t.stop());
     stream = null;
   }
 
-  if (srcNode) srcNode.disconnect();
-  if (gainNode) gainNode.disconnect();
-  if (analyser) analyser.disconnect();
+  // 断开所有节点
+  [srcNode, filterNode, compressor, gainNode, analyser].forEach(n => {
+    if (n) try { n.disconnect(); } catch(i) {}
+  });
 
+  // 关闭上下文并置空
   if (actx) {
     await actx.close();
     actx = null;
@@ -167,31 +157,33 @@ async function cleanup() {
 
   pwrBtn.classList.remove('on');
   statusTxt.textContent = '点击开始';
+  statusTxt.classList.remove('on');
   lvlFill.style.width = '0%';
   lvlDb.textContent = '-∞ dB';
 }
 
 function updateVolume() {
   if (gainNode) {
-    // 逻辑：滑块百分比 * 硬件补偿
-    const val = (volSl.value / 100) * MASTER_GAIN_BOOST;
-    gainNode.gain.setTargetAtTime(val, actx.currentTime, 0.01);
+    const val = (volSl.value / 100) * MAKEUP_GAIN;
+    // 使用平滑过渡防止点击声
+    gainNode.gain.setTargetAtTime(val, actx.currentTime, 0.02);
   }
 }
 
-function drawViz() {
-  if (!isActive || !analyser) return;
+function draw() {
+  if (!isActive) return;
+  
   const w = canvas.width / devicePixelRatio, h = canvas.height / devicePixelRatio;
   cCtx.clearRect(0, 0, w, h);
   
   const freqData = new Uint8Array(analyser.frequencyBinCount);
   analyser.getByteFrequencyData(freqData);
   
-  const bars = 30, bw = w / bars;
+  const bars = 40, bw = w / bars;
   for (let i = 0; i < bars; i++) {
     const v = freqData[Math.floor(i * freqData.length / bars)] / 255;
     cCtx.fillStyle = '#00ffc8';
-    cCtx.fillRect(i * bw + 2, h - (v * h), bw - 4, v * h);
+    cCtx.fillRect(i * bw + 1, h - (v * h * 0.9), bw - 2, v * h * 0.9);
   }
 
   const td = new Uint8Array(analyser.frequencyBinCount);
@@ -202,10 +194,10 @@ function drawViz() {
   lvlFill.style.width = Math.min(100, rms * 400) + '%';
   lvlDb.textContent = (rms > 0.0001 ? (20*Math.log10(rms)).toFixed(1) : '-∞') + ' dB';
   
-  animId = requestAnimationFrame(drawViz);
+  animId = requestAnimationFrame(draw);
 }
 
-// 按钮与监听
+// 事件监听
 pwrBtn.onclick = () => isActive ? cleanup() : startAudio();
 volSl.oninput = () => {
   volVal.textContent = volSl.value + '%';
@@ -217,16 +209,25 @@ monTog.onchange = () => {
   else analyser.disconnect(actx.destination);
 };
 
-// 初始设备获取
-navigator.mediaDevices.getUserMedia({ audio: true }).then(s => {
-  s.getTracks().forEach(t => t.stop());
-  enumDevices();
-});
-
-async function enumDevices() {
-  const devs = await navigator.mediaDevices.enumerateDevices();
-  inSel.innerHTML = devs.filter(d => d.kind === 'audioinput').map(d => `<option value="${d.deviceId}">${d.label || '输入'}</option>`).join('');
-  outSel.innerHTML = devs.filter(d => d.kind === 'audiooutput').map(d => `<option value="${d.deviceId}">${d.label || '输出'}</option>`).join('');
+// 画布尺寸
+function resize() {
+  const r = canvas.parentElement.getBoundingClientRect();
+  canvas.width = r.width * devicePixelRatio;
+  canvas.height = r.height * devicePixelRatio;
+  cCtx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
 }
+window.onresize = resize; resize();
+
+// 初始化设备
+async function initDevs() {
+  try {
+    await navigator.mediaDevices.getUserMedia({ audio: true });
+    const devs = await navigator.mediaDevices.enumerateDevices();
+    inSel.innerHTML = devs.filter(d => d.kind === 'audioinput')
+      .map(d => `<option value="${d.deviceId}">${d.label || '麦克风'}</option>`).join('');
+  } catch(e) {}
+}
+initDevs();
+</script>
 </body>
 </html>
