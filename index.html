@@ -3,157 +3,351 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>KTV Pro - Realtime Low Latency</title>
+<title>KTV Pro - Low Latency</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
-/* UI 保持一致的高级感 */
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}:root{--bg:#08080e;--s1:#0e0e18;--s2:#151522;--s3:#1c1c2e;--accent:#00ffc8;--accent-dim:#00ffc828;--accent-glow:#00ffc850;--amber:#ffb020;--text:#e8e8f0;--muted:#5a5a72;--ring:#252538}html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;overflow-x:hidden}body{display:flex;flex-direction:column;align-items:center;padding:16px 14px 32px}.app{width:100%;max-width:400px;display:flex;flex-direction:column;gap:18px;position:relative;z-index:1}.header{text-align:center}.header h1{font-family:'Space Mono',monospace;font-size:13px;letter-spacing:.35em;text-transform:uppercase;color:var(--muted)}.viz-wrap{width:100%;aspect-ratio:2.2/1;border-radius:14px;background:var(--s1);border:1px solid var(--ring);overflow:hidden}canvas{width:100%;height:100%}.level-row{width:100%;display:flex;align-items:center;gap:10px}.level-track{flex:1;height:5px;background:var(--s2);border-radius:3px;overflow:hidden}.level-fill{height:100%;width:0%;background:var(--accent);box-shadow:0 0 10px var(--accent-glow);transition:width .05s linear}.level-db{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);width:50px;text-align:right}.power-btn{width:80px;height:80px;border-radius:50%;border:2px solid var(--ring);background:var(--s1);cursor:pointer;margin:0 auto;display:flex;align-items:center;justify-content:center;transition:0.3s}.power-btn.on{border-color:var(--accent);box-shadow:0 0 30px var(--accent-dim)}.panel{width:100%;background:var(--s1);border:1px solid var(--ring);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:12px}.panel-title{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:0.1em}.slider-row{display:flex;align-items:center;gap:10px}input[type=range]{flex:1;height:3px;background:var(--s3);-webkit-appearance:none;outline:none}input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent)}.dev-sel{width:100%;background:var(--s2);border:1px solid var(--ring);color:var(--text);padding:8px;border-radius:6px;font-size:11px}.info-bar{width:100%;display:flex;justify-content:space-between;padding:0 10px}.info-item{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted)}span.val{color:var(--accent)}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#08080e;--s1:#0e0e18;--s2:#151522;--s3:#1c1c2e;--accent:#00ffc8;--accent-dim:rgba(0,255,200,.16);--accent-glow:rgba(0,255,200,.3);--red:#ff4060;--text:#e8e8f0;--muted:#5a5a72;--ring:#252538;--r:12px}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;overflow-x:hidden}
+body{display:flex;flex-direction:column;align-items:center;padding:16px 14px 32px}
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");opacity:.03;pointer-events:none;z-index:0}
+.app{width:100%;max-width:400px;display:flex;flex-direction:column;gap:14px;position:relative;z-index:1}
+.header{text-align:center}
+.header h1{font-family:'Space Mono',monospace;font-size:13px;letter-spacing:.35em;text-transform:uppercase;color:var(--muted)}
+.header .sub{font-size:9px;color:var(--muted);opacity:.5;margin-top:3px;letter-spacing:.08em}
+.viz-wrap{width:100%;aspect-ratio:2.2/1;border-radius:var(--r);background:var(--s1);border:1px solid var(--ring);overflow:hidden;position:relative}
+.viz-wrap canvas{width:100%;height:100%}
+.viz-tag{position:absolute;top:7px;right:9px;font-family:'Space Mono',monospace;font-size:7px;color:var(--muted);background:rgba(8,8,14,.7);padding:2px 6px;border-radius:3px;backdrop-filter:blur(4px)}
+.level-row{width:100%;display:flex;align-items:center;gap:8px}
+.gate-ind{display:flex;align-items:center;gap:5px;font-family:'Space Mono',monospace;font-size:8px;color:var(--muted);min-width:56px}
+.gate-dot{width:6px;height:6px;border-radius:50%;background:var(--red);transition:background .15s,box-shadow .15s}
+.gate-dot.open{background:var(--accent);box-shadow:0 0 6px var(--accent-glow)}
+.level-track{flex:1;height:5px;background:var(--s2);border-radius:3px;overflow:hidden}
+.level-fill{height:100%;width:0;background:var(--accent);box-shadow:0 0 10px var(--accent-glow);transition:width .06s linear;border-radius:3px}
+.level-db{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);min-width:52px;text-align:right}
+.power-btn{width:76px;height:76px;border-radius:50%;border:2px solid var(--ring);background:var(--s1);cursor:pointer;margin:6px auto;display:flex;align-items:center;justify-content:center;transition:.3s}
+.power-btn:active{transform:scale(.94)}
+.power-btn.on{border-color:var(--accent);box-shadow:0 0 30px var(--accent-dim),0 0 60px rgba(0,255,200,.08)}
+.power-btn.on svg{stroke:var(--accent);filter:drop-shadow(0 0 6px var(--accent-glow))}
+.panel{width:100%;background:var(--s1);border:1px solid var(--ring);border-radius:var(--r);padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.ptitle{font-family:'Space Mono',monospace;font-size:8px;color:var(--muted);letter-spacing:.1em;display:flex;align-items:center;gap:7px}
+.ptitle::before{content:'';width:4px;height:4px;border-radius:50%;background:var(--accent);flex-shrink:0}
+.srow{display:flex;align-items:center;gap:8px}
+.srow .lbl{font-size:10px;color:var(--muted);min-width:52px}
+.srow .val{font-family:'Space Mono',monospace;font-size:10px;color:var(--accent);min-width:30px;text-align:right}
+input[type=range]{flex:1;height:3px;background:var(--s3);-webkit-appearance:none;appearance:none;outline:none;border-radius:2px}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 0 6px var(--accent-dim)}
+input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--accent);cursor:pointer;border:none}
+.trow{display:flex;align-items:center;justify-content:space-between}
+.trow span{font-size:10px;color:var(--muted)}
+.toggle{width:36px;height:20px;border-radius:10px;background:var(--s3);cursor:pointer;position:relative;transition:background .2s,border-color .2s;border:1px solid var(--ring)}
+.toggle.on{background:rgba(0,255,200,.25);border-color:var(--accent)}
+.toggle::after{content:'';position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:var(--text);transition:transform .2s}
+.toggle.on::after{transform:translateX(16px);background:var(--accent)}
+.dev-sel{width:100%;background:var(--s2);border:1px solid var(--ring);color:var(--text);padding:8px 10px;border-radius:6px;font-size:11px;font-family:'Outfit',sans-serif;outline:none;cursor:pointer}
+.dev-sel:focus{border-color:var(--accent)}
+.info-bar{width:100%;display:flex;justify-content:space-between;padding:0 2px}
+.info-item{font-family:'Space Mono',monospace;font-size:8px;color:var(--muted)}
+.info-item .v{color:var(--accent)}
+.warn{font-size:9px;color:var(--muted);text-align:center;opacity:.5}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.app>*{animation:fadeUp .5s ease backwards}
+.app>*:nth-child(1){animation-delay:.05s}
+.app>*:nth-child(2){animation-delay:.1s}
+.app>*:nth-child(3){animation-delay:.12s}
+.app>*:nth-child(4){animation-delay:.16s}
+.app>*:nth-child(5){animation-delay:.2s}
+.app>*:nth-child(6){animation-delay:.24s}
+.app>*:nth-child(7){animation-delay:.28s}
+.app>*:nth-child(8){animation-delay:.32s}
+.app>*:nth-child(9){animation-delay:.36s}
 </style>
 </head>
 <body>
 <div class="app">
-  <div class="header"><h1>KTV MIC PRO</h1></div>
-  <div class="viz-wrap"><canvas id="viz"></canvas></div>
+  <div class="header"><h1>KTV MIC PRO</h1><div class="sub">Low Latency &middot; Noise Gate &middot; Algorithmic Reverb</div></div>
+
+  <div class="viz-wrap"><canvas id="viz"></canvas><div class="viz-tag">FFT 512</div></div>
+
   <div class="level-row">
+    <div class="gate-ind"><div class="gate-dot" id="gateDot"></div><span id="gateLbl">GATE</span></div>
     <div class="level-track"><div class="level-fill" id="lvlFill"></div></div>
     <span class="level-db" id="lvlDb">-∞ dB</span>
   </div>
 
   <button class="power-btn" id="pwrBtn">
-    <svg id="micIco" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v11m-7-5a7 7 0 0 0 14 0"/></svg>
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v8"/><path d="M6.34 6.34A8 8 0 1 0 17.66 6.34"/></svg>
   </button>
 
   <div class="panel">
-    <span class="panel-title">主音量 / VOLUME</span>
-    <div class="slider-row">
-      <input type="range" id="volSlider" min="0" max="200" value="100">
-      <span style="font-size:10px; width:30px" id="volVal">100</span>
-    </div>
-    
-    <span class="panel-title">混响深度 / REVERB (KTV MODE)</span>
-    <div class="slider-row">
-      <input type="range" id="revSlider" min="0" max="60" value="25">
-      <span style="font-size:10px; width:30px" id="revVal">25</span>
-    </div>
+    <div class="ptitle">主音量 / VOLUME</div>
+    <div class="srow"><span class="lbl">增益</span><input type="range" id="volSlider" min="0" max="300" value="120"><span class="val" id="volVal">120</span></div>
   </div>
 
   <div class="panel">
-    <select class="dev-sel" id="inSel"></select>
+    <div class="ptitle">降噪 / NOISE GATE</div>
+    <div class="trow"><span>启用噪声门</span><div class="toggle on" id="gateToggle"></div></div>
+    <div class="srow"><span class="lbl">阈值</span><input type="range" id="gateSlider" min="1" max="80" value="15"><span class="val" id="gateVal">15</span></div>
   </div>
 
-  <div class="info-bar">
-    <div class="info-item">实时延迟: <span class="val" id="latVal">0.00</span> ms</div>
-    <div class="info-item">采样率: <span class="val" id="srVal">--</span></div>
+  <div class="panel">
+    <div class="ptitle">混响 / REVERB</div>
+    <div class="srow"><span class="lbl">房间大小</span><input type="range" id="roomSlider" min="0" max="100" value="40"><span class="val" id="roomVal">40</span></div>
+    <div class="srow"><span class="lbl">混响量</span><input type="range" id="wetSlider" min="0" max="80" value="25"><span class="val" id="wetVal">25</span></div>
   </div>
+
+  <div class="panel"><select class="dev-sel" id="inSel"><option>正在获取设备…</option></select></div>
+
+  <div class="info-bar">
+    <div class="info-item">延迟 <span class="v" id="latVal">--</span></div>
+    <div class="info-item">缓冲 <span class="v" id="bufVal">--</span></div>
+    <div class="info-item">采样率 <span class="v" id="srVal">--</span></div>
+  </div>
+  <div class="warn">回声消除 / 自动增益 / 噪声抑制已关闭</div>
 </div>
 
 <script>
-const $ = id => document.getElementById(id);
-let actx, stream, src, gain, delay, feedback, fbGain, compressor, analyser, isActive = false, animId;
+/* ====== Noise Gate AudioWorklet ====== */
+const WG_CODE=`
+class NoiseGate extends AudioWorkletProcessor{
+  constructor(){
+    super();
+    this.thr=.015;this.gain=0;this.hold=0;this.on=true;this.open=false;
+    this.aK=0;this.rK=0;this.hN=0;
+    const sr=sampleRate;
+    this.aK=1-Math.exp(-1/(.003*sr));
+    this.rK=1-Math.exp(-1/(.15*sr));
+    this.hN=Math.floor(.06*sr);
+    this.port.onmessage=e=>{
+      const d=e.data;
+      if(d.thr!=null)this.thr=d.thr;
+      if(d.on!=null)this.on=d.on;
+    };
+  }
+  process(inputs,outputs){
+    const inp=inputs[0],out=outputs[0];
+    if(!inp||!inp.length)return true;
+    const ch=inp.length,len=inp[0].length;
+    if(!this.on){
+      this.gain=1;
+      for(let c=0;c<ch;c++)out[c].set(inp[c]);
+      if(!this.open){this.open=true;this.port.postMessage({open:true});}
+      return true;
+    }
+    for(let i=0;i<len;i++){
+      let p=0;
+      for(let c=0;c<ch;c++){const v=Math.abs(inp[c][i]);if(v>p)p=v;}
+      if(p>this.thr)this.hold=this.hN;
+      if(this.hold>0){this.gain+=(1-this.gain)*this.aK;this.hold--;}
+      else this.gain+=(0-this.gain)*this.rK;
+      for(let c=0;c<ch;c++)out[c][i]=inp[c][i]*this.gain;
+    }
+    const now=this.gain>.5;
+    if(now!==this.open){this.open=now;this.port.postMessage({open:now});}
+    return true;
+  }
+}
+registerProcessor('noise-gate',NoiseGate);`;
 
-async function start() {
-    try {
-        const constraints = { audio: { deviceId: $("inSel").value ? {exact: $("inSel").value} : undefined, echoCancellation: false, noiseSuppression: false, autoGainControl: false } };
-        stream = await navigator.mediaDevices.getUserMedia(constraints);
-        
-        actx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 0 });
-        src = actx.createMediaStreamSource(stream);
+/* ====== Globals ====== */
+const $=id=>document.getElementById(id);
+let actx,stream,src,gainNode,compressor,analyser,gateNode;
+let reverbIn,wetGain,reverbCtrl;
+let isActive=false,animId,canvasW=0,canvasH=0;
 
-        // 1. 基础处理：压缩器防止爆音
-        compressor = actx.createDynamicsCompressor();
-        
-        // 2. 音量控制
-        gain = actx.createGain();
-        
-        // 3. KTV 回声电路 (Delay + Feedback Loop)
-        delay = actx.createDelay();
-        delay.delayTime.value = 0.15; // 150ms 的回声延迟，KTV标准
-        fbGain = actx.createGain();   // 反馈增益（决定回声多少次）
-        
-        analyser = actx.createAnalyser();
-        analyser.fftSize = 256;
-
-        // 链路连接：
-        // (1) 直通干声：Src -> Compressor -> Gain -> Analyser -> Dest
-        src.connect(compressor);
-        compressor.connect(gain);
-        gain.connect(analyser);
-        analyser.connect(actx.destination);
-
-        // (2) 湿声回路：Gain -> Delay -> FeedbackGain -> Delay (循环) -> Analyser
-        gain.connect(delay);
-        delay.connect(fbGain);
-        fbGain.connect(delay); // 闭环形成重复回声
-        fbGain.connect(analyser); // 将回声送往输出
-
-        updateParams();
-        isActive = true;
-        $("pwrBtn").classList.add("on");
-        $("srVal").textContent = actx.sampleRate + "Hz";
-        render();
-    } catch(e) { alert(e); }
+/* ====== Schroeder-style Reverb (parallel comb filters + allpass) ====== */
+function createReverb(ctx){
+  const input=ctx.createGain(),output=ctx.createGain();
+  const combDef=[
+    {t:.0297,fb:.87},{t:.0371,fb:.84},{t:.0411,fb:.82},{t:.0437,fb:.81},{t:.0482,fb:.79}
+  ];
+  function fb(rt60,d){return Math.pow(10,-3*d/rt60);}
+  const nodes=combDef.map(({t})=>{
+    const d=ctx.createDelay(2);d.delayTime.value=t;
+    const f=ctx.createGain();f.gain.value=fb(1.5,t);
+    const lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=4500;
+    input.connect(d);d.connect(lp);lp.connect(f);f.connect(d);lp.connect(output);
+    return{delay:d,fb:f,lp,baseTime:t};
+  });
+  const ap1=ctx.createBiquadFilter();ap1.type='allpass';ap1.frequency.value=720;
+  const ap2=ctx.createBiquadFilter();ap2.type='allpass';ap2.frequency.value=2800;
+  output.connect(ap1);ap1.connect(ap2);
+  return{
+    input,output:ap2,
+    setRoom(s){
+      const rt60=.3+s*2.2,df=2000+s*6000;
+      nodes.forEach(n=>{
+        n.fb.gain.value=Math.min(.92,fb(rt60,n.baseTime));
+        n.lp.frequency.value=df;
+      });
+    }
+  };
 }
 
-function updateParams() {
-    if (!actx) return;
-    // 更新音量 (x2.5 补偿)
-    gain.gain.setTargetAtTime(($("volSlider").value/100) * 2.5, actx.currentTime, 0.02);
-    // 更新混响深度 (反馈量)
-    const revLevel = $("revSlider").value / 100; // 0.0 - 0.6
-    fbGain.gain.setTargetAtTime(revLevel, actx.currentTime, 0.02);
+/* ====== Canvas Setup ====== */
+function fitCanvas(){
+  const c=$('viz'),r=c.getBoundingClientRect(),dpr=devicePixelRatio||1;
+  c.width=r.width*dpr;c.height=r.height*dpr;
+  canvasW=r.width;canvasH=r.height;
+  const x=c.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);
 }
 
-function render() {
-    if (!isActive) return;
+/* ====== Start Audio ====== */
+async function start(){
+  try{
+    const devId=$('inSel').value;
+    stream=await navigator.mediaDevices.getUserMedia({
+      audio:{
+        deviceId:devId?{exact:devId}:undefined,
+        echoCancellation:false,noiseSuppression:false,autoGainControl:false
+      }
+    });
+    actx=new(window.AudioContext||window.webkitAudioContext)({latencyHint:'interactive'});
 
-    // 计算实时延迟 (ms)
-    // baseLatency (硬件缓冲) + outputLatency (系统调度)
-    const lat = (actx.baseLatency || 0) + (actx.outputLatency || 0);
-    $("latVal").textContent = (lat * 1000).toFixed(2);
+    /* Worklet */
+    let useGate=true;
+    try{
+      const blob=new Blob([WG_CODE],{type:'application/javascript'});
+      await actx.audioWorklet.addModule(URL.createObjectURL(blob));
+    }catch(e){console.warn('AudioWorklet unavailable',e);useGate=false;}
 
-    // 绘制频谱
-    const canvas = $("viz"), ctx = canvas.getContext("2d");
-    const w = canvas.width, h = canvas.height;
-    ctx.clearRect(0, 0, w, h);
-    const data = new Uint8Array(analyser.frequencyBinCount);
-    analyser.getByteFrequencyData(data);
-    ctx.fillStyle = "#00ffc8";
-    const barW = w / data.length;
-    for(let i=0; i<data.length; i++) {
-        const val = data[i]/255 * h;
-        ctx.fillRect(i*barW, h-val, barW-1, val);
+    src=actx.createMediaStreamSource(stream);
+
+    /* High-pass: kill rumble < 80 Hz */
+    const hp=actx.createBiquadFilter();hp.type='highpass';hp.frequency.value=80;hp.Q.value=.7;
+
+    /* Compressor: tuned for voice */
+    compressor=actx.createDynamicsCompressor();
+    compressor.threshold.value=-15;compressor.knee.value=8;
+    compressor.ratio.value=6;compressor.attack.value=.002;compressor.release.value=.08;
+
+    gainNode=actx.createGain();
+
+    analyser=actx.createAnalyser();analyser.fftSize=512;analyser.smoothingTimeConstant=.7;
+
+    /* Reverb */
+    const rev=createReverb(actx);
+    reverbIn=rev.input;
+    wetGain=actx.createGain();wetGain.gain.value=.25;
+    rev.output.connect(wetGain);wetGain.connect(analyser);
+    reverbCtrl=rev;
+
+    /* Noise Gate */
+    if(useGate){
+      gateNode=new AudioWorkletNode(actx,'noise-gate');
+      gateNode.port.onmessage=e=>{
+        $('gateDot').classList.toggle('open',e.data.open);
+        $('gateLbl').textContent=e.data.open?'OPEN':'MUTE';
+      };
+      src.connect(gateNode);gateNode.connect(hp);
+    }else{
+      src.connect(hp);
     }
 
-    // 更新电平条
-    const td = new Uint8Array(analyser.frequencyBinCount);
-    analyser.getByteTimeDomainData(td);
-    let sum = 0;
-    for(let i=0; i<td.length; i++) { let v = (td[i]-128)/128; sum += v*v; }
-    const rms = Math.sqrt(sum/td.length);
-    $("lvlFill").style.width = Math.min(100, rms*400) + "%";
-    $("lvlDb").textContent = rms > 0.001 ? (20*Math.log10(rms)).toFixed(1) + " dB" : "-∞ dB";
+    hp.connect(compressor);compressor.connect(gainNode);
+    gainNode.connect(analyser);analyser.connect(actx.destination);
+    gainNode.connect(reverbIn);
 
-    animId = requestAnimationFrame(render);
+    updateParams();isActive=true;
+    $('pwrBtn').classList.add('on');
+    $('srVal').textContent=actx.sampleRate+'Hz';
+    fitCanvas();render();
+  }catch(e){alert('启动失败: '+e.message);console.error(e);}
 }
 
-async function stop() {
-    isActive = false;
-    cancelAnimationFrame(animId);
-    if(stream) stream.getTracks().forEach(t => t.stop());
-    if(actx) await actx.close();
-    $("pwrBtn").classList.remove("on");
-    $("latVal").textContent = "0.00";
+/* ====== Stop ====== */
+async function stop(){
+  isActive=false;cancelAnimationFrame(animId);
+  if(stream)stream.getTracks().forEach(t=>t.stop());
+  if(actx)await actx.close();
+  $('pwrBtn').classList.remove('on');
+  $('latVal').textContent='--';$('bufVal').textContent='--';$('srVal').textContent='--';
+  $('gateDot').classList.remove('open');$('gateLbl').textContent='GATE';
+  const c=$('viz'),x=c.getContext('2d');x.clearRect(0,0,canvasW,canvasH);
 }
 
-$("pwrBtn").onclick = () => isActive ? stop() : start();
-$("volSlider").oninput = () => { $("volVal").textContent = $("volSlider").value; updateParams(); };
-$("revSlider").oninput = () => { $("revVal").textContent = $("revSlider").value; updateParams(); };
+/* ====== Parameter Updates ====== */
+function updateParams(){
+  if(!actx)return;
+  gainNode.gain.setTargetAtTime($('volSlider').value/100*2.5,actx.currentTime,.02);
+  if(gateNode)gateNode.port.postMessage({thr:$('gateSlider').value/1000,on:$('gateToggle').classList.contains('on')});
+  if(reverbCtrl)reverbCtrl.setRoom($('roomSlider').value/100);
+  if(wetGain)wetGain.gain.setTargetAtTime($('wetSlider').value/100,actx.currentTime,.04);
+}
 
-// 初始化设备列表
-navigator.mediaDevices.enumerateDevices().then(devs => {
-    $("inSel").innerHTML = devs.filter(d => d.kind === 'audioinput').map(d => `<option value="${d.deviceId}">${d.label||'Mic'}</option>`).join('');
-});
+/* ====== Render / Visualization ====== */
+function render(){
+  if(!isActive)return;
+  const c=$('viz'),ctx=c.getContext('2d');
+  ctx.clearRect(0,0,canvasW,canvasH);
+
+  /* Spectrum */
+  const bufLen=analyser.frequencyBinCount;
+  const data=new Uint8Array(bufLen);
+  analyser.getByteFrequencyData(data);
+  const barW=canvasW/bufLen;
+  const grad=ctx.createLinearGradient(0,canvasH,0,0);
+  grad.addColorStop(0,'rgba(0,255,200,.85)');
+  grad.addColorStop(.4,'rgba(0,255,200,.45)');
+  grad.addColorStop(1,'rgba(0,255,200,.08)');
+  ctx.fillStyle=grad;
+  for(let i=0;i<bufLen;i++){
+    const v=data[i]/255*canvasH*.92;
+    if(v<1)continue;
+    const x=i*barW;
+    ctx.fillRect(x,canvasH-v,Math.max(barW-.8,1),v);
+  }
+
+  /* Level meter */
+  const td=new Uint8Array(bufLen);
+  analyser.getByteTimeDomainData(td);
+  let sum=0;
+  for(let i=0;i<td.length;i++){const v=(td[i]-128)/128;sum+=v*v;}
+  const rms=Math.sqrt(sum/td.length);
+  $('lvlFill').style.width=Math.min(100,rms*400)+'%';
+  $('lvlDb').textContent=rms>.001?(20*Math.log10(rms)).toFixed(1)+' dB':'-∞ dB';
+
+  /* Latency */
+  if(actx){
+    const lat=((actx.baseLatency||0)+(actx.outputLatency||0))*1000;
+    $('latVal').textContent=lat.toFixed(1)+'ms';
+    $('bufVal').textContent=((actx.baseLatency||0)*1000).toFixed(1)+'ms';
+  }
+
+  animId=requestAnimationFrame(render);
+}
+
+/* ====== Events ====== */
+$('pwrBtn').onclick=()=>isActive?stop():start();
+
+$('volSlider').oninput=()=>{$('volVal').textContent=$('volSlider').value;updateParams();};
+$('gateSlider').oninput=()=>{$('gateVal').textContent=$('gateSlider').value;updateParams();};
+$('roomSlider').oninput=()=>{$('roomVal').textContent=$('roomSlider').value;updateParams();};
+$('wetSlider').oninput=()=>{$('wetVal').textContent=$('wetSlider').value;updateParams();};
+
+$('gateToggle').onclick=function(){
+  this.classList.toggle('on');
+  updateParams();
+};
+
+window.addEventListener('resize',()=>{if(isActive)fitCanvas();});
+
+/* ====== Device Enumeration ====== */
+async function loadDevices(){
+  try{
+    await navigator.mediaDevices.getUserMedia({audio:true});
+    const devs=await navigator.mediaDevices.enumerateDevices();
+    const inputs=devs.filter(d=>d.kind==='audioinput');
+    $('inSel').innerHTML=inputs.length
+      ?inputs.map(d=>`<option value="${d.deviceId}">${d.label||'麦克风 '+d.deviceId.slice(0,6)}`).join('')
+      :'<option>未检测到输入设备</option>';
+  }catch(e){
+    $('inSel').innerHTML='<option>需要麦克风权限</option>';
+  }
+  navigator.mediaDevices.addEventListener('devicechange',loadDevices);
+}
+loadDevices();
 </script>
 </body>
 </html>
