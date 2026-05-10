@@ -200,7 +200,8 @@ async function start(){
     stream=await navigator.mediaDevices.getUserMedia({
       audio:{
         deviceId:devId?{exact:devId}:undefined,
-        echoCancellation:false,noiseSuppression:false,autoGainControl:false
+        // 开启回声消除，开启噪声抑制，关闭自动增益
+        echoCancellation:true,noiseSuppression:true,autoGainControl:false
       }
     });
     actx=new(window.AudioContext||window.webkitAudioContext)({latencyHint:'interactive'});
